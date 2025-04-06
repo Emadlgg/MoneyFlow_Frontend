@@ -4,19 +4,54 @@ import react from '@vitejs/plugin-react';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // Solución para react-icons
+      'react-icons/fi': 'react-icons/fi/index.esm.js',
+      // Aliases adicionales recomendados (opcional)
+      '@': '/src',
+      '@components': '/src/components',
+      '@pages': '/src/pages'
+    }
+  },
   server: {
-    port: 3000, // Para que coincida con el mapeo 3001:3000 en docker-compose.yml
-    host: true, // Permite conexiones desde fuera del contenedor
-    strictPort: true, // Evita que Vite cambie el puerto si está ocupado
+    port: 3000,
+    host: true,
+    strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://backend:3000', // Usa el nombre del servicio de Docker
+        target: 'http://backend:3000',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        // Configuración adicional para WebSockets si es necesario
+        ws: true
       }
+    },
+    // Configuración adicional para HMR (Hot Module Replacement)
+    hmr: {
+      overlay: false // Desactiva el overlay de errores en pantalla
     }
   },
   preview: {
-    port: 3000 // Puerto para el comando 'preview' (producción)
+    port: 3000,
+    host: true
+  },
+  // Optimización para build
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: true, // Recomendado para desarrollo
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separa react-icons en su propio chunk
+          'react-icons': ['react-icons/fi']
+        }
+      }
+    }
+  },
+  // Configuración para TypeScript
+  esbuild: {
+    jsxInject: `import React from 'react'` // Auto-inyecta React en los archivos JSX
   }
 });
