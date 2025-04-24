@@ -117,3 +117,5 @@ export default defineConfig({
 - Añadir Storybook para documentación de componentes
 - Implementar testing E2E con Cypress
 - Internacionalización (i18n)
+
+> 🛑 Importante: Requiere del repositorio principal para hacerlo funcional, este se encuentra en https://github.com/Emadlgg/MoneyFlow_deploy.git, ahi se encuentran las instrucciones para poder desplegar la aplicacion.
