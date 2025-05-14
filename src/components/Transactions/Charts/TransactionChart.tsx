@@ -3,22 +3,24 @@ import Chart from 'chart.js/auto';
 import { Transaction } from '../../../../types/models';
 
 interface TransactionChartProps {
-  transactions: Transaction[];
+  transactions?: Transaction[];
 }
 
-const TransactionChart = ({ transactions }: TransactionChartProps) => {
+const TransactionChart = ({ transactions = [] }: TransactionChartProps) => {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart | null>(null);
 
   useEffect(() => {
+    // Solo inicializa el gráfico si hay al menos una transacción
     if (chartRef.current && transactions.length > 0) {
-      const categories = [...new Set(transactions.map(t => t.category))];
+      const categories = Array.from(new Set(transactions.map(t => t.category)));
       const dataByCategory = categories.map(category => 
         transactions
           .filter(t => t.category === category)
           .reduce((sum, t) => sum + t.amount, 0)
       );
 
+      // Destruye instancia anterior si existe
       if (chartInstance.current) {
         chartInstance.current.destroy();
       }
@@ -50,12 +52,18 @@ const TransactionChart = ({ transactions }: TransactionChartProps) => {
       });
     }
 
+    // Cleanup al desmontar o cambiar transactions
     return () => {
       if (chartInstance.current) {
         chartInstance.current.destroy();
       }
     };
   }, [transactions]);
+
+  // Mensaje si no hay datos
+  if (transactions.length === 0) {
+    return <p className="text-center text-gray-500">Sin datos para el gráfico</p>;
+  }
 
   return <canvas ref={chartRef} />;
 };

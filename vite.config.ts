@@ -18,16 +18,7 @@ export default defineConfig({
     port: 3000,
     host: true,
     strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://backend:3000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-        // Configuración adicional para WebSockets si es necesario
-        ws: true
-      }
-    },
-    // Configuración adicional para HMR (Hot Module Replacement)
+    // Eliminado proxy para usar VITE_API_URL en su lugar
     hmr: {
       overlay: false // Desactiva el overlay de errores en pantalla
     }
