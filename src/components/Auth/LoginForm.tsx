@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { loginUser } from '../../services/auth.service';
 import { AuthContext } from '../../contexts/AuthContext';
+import '../../assets/style/login.css'; 
 
 export default function LoginForm() {
   const [email, setEmail]       = useState('');
