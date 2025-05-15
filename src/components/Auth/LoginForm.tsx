@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { loginUser } from '../../services/auth.service';
 import { AuthContext } from '../../contexts/AuthContext';
-import '../../assets/style/login.css'; 
+import '../../assets/style/login.css';
 
 export default function LoginForm() {
   const [email, setEmail]       = useState('');
@@ -17,9 +17,9 @@ export default function LoginForm() {
     e.preventDefault();
     setError(null);
     try {
-      const user = await loginUser(email, password);  // aquí ya no rompe
+      const user = await loginUser(email, password);
       setUser(user);
-      navigate('/transactions', { replace: true });   // y navega correctamente
+      navigate('/transactions', { replace: true });
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response) {
         setError(err.response.data?.error || 'Credenciales inválidas');
@@ -30,29 +30,54 @@ export default function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="login-form">
-      {error && <p className="error">{error}</p>}
-      <div>
-        <label>Email</label>
-        <input
-          type="email"
-          autoComplete="username"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
-      </div>
-      <div>
-        <label>Contraseña</label>
-        <input
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-      </div>
-      <button type="submit">Entrar</button>
-    </form>
+    <div className="login">
+      <form onSubmit={handleSubmit} className="login__form">
+        <h2 className="login__title">User Login</h2>
+
+        {error && <p className="login__error">{error}</p>}
+
+        <div className="login__content">
+          <div className="login__box">
+            <i className="login__icon">📧</i>
+            <div className="login__box-input">
+              <input
+                className="login__input"
+                type="email"
+                placeholder=" "
+                autoComplete="username"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+              <label className="login__label">Email</label>
+            </div>
+          </div>
+
+          <div className="login__box">
+            <i className="login__icon">🔒</i>
+            <div className="login__box-input">
+              <input
+                className="login__input"
+                type="password"
+                placeholder=" "
+                autoComplete="current-password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
+              <label className="login__label">Contraseña</label>
+            </div>
+          </div>
+        </div>
+
+        <a href="#" className="login__forgot">Forgot Password?</a>
+
+        <button type="submit" className="login__button">Entrar</button>
+
+        <p className="login__register">
+          ¿No tienes cuenta? <a href="#">Regístrate</a>
+        </p>
+      </form>
+    </div>
   );
 }
