@@ -1,19 +1,18 @@
 import api from './api';
-import type { User } from '../../types/models';
+import type { User } from '@supabase/supabase-js';
 
-interface LoginResponse {
-  token: string;
+export interface LoginResponse {
   user: User;
+  token: string;
 }
 
-export const loginUser = async (email: string, password: string): Promise<User> => {
-  const response = await api.post<LoginResponse>('/auth/login', { email, password });
-  // Ahora response es un AxiosResponse<LoginResponse>
-  const { token, user } = response.data;   // <— extraemos .data
-  localStorage.setItem('authToken', token);
-  localStorage.setItem('user', JSON.stringify(user));
-  return user;
-};
+export async function loginUser(email: string, password: string): Promise<LoginResponse> {
+  const { data } = await api.post<{ user: User; token: string }>('/auth/login', { email, password });
+  return {
+    user: data.user,
+    token: data.token
+  };
+}
 
 export const logoutUser = () => {
   localStorage.removeItem('authToken');

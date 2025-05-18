@@ -1,38 +1,40 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import type { User } from '../../types/models';
+// src/contexts/AuthContext.tsx
+import React, { createContext, useState, useEffect, ReactNode } from 'react'
+import type { User } from '@supabase/supabase-js'
+import { supabase } from '../services/supabaseClient'
 
-interface AuthContextProps {
-  user: User | null;
-  setUser: (u: User | null) => void;
-  logout: () => void;
+interface AuthContextType {
+  user: User | null
+  signOut: () => Promise<void>
 }
 
-export const AuthContext = createContext<AuthContextProps>({
+export const AuthContext = createContext<AuthContextType>({
   user: null,
-  setUser: () => {},
-  logout: () => {}
-});
+  signOut: async () => {}
+})
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+    supabase.auth.getSession().then(({ data:{ session } }) => {
+      setUser(session?.user ?? null)
+    })
 
-  const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    setUser(null);
-    window.location.href = '/login';
-  };
+    const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
+      setUser(session?.user ?? null)
+    })
+
+    return () => { listener.subscription.unsubscribe() }
+  }, [])
+
+  const signOut = async () => {
+    await supabase.auth.signOut()
+  }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, logout }}>
+    <AuthContext.Provider value={{ user, signOut }}>
       {children}
     </AuthContext.Provider>
-  );
+  )
 }

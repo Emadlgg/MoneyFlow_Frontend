@@ -1,18 +1,17 @@
-// src/pages/Transactions.tsx
 import { useState, useEffect, useContext } from 'react';
 import TransactionForm from '../components/Transactions/TransactionForm';
 import TransactionList from '../components/Transactions/TransactionList';
 import TransactionChart from '../components/Transactions/Charts/TransactionChart';
 import { getTransactions } from '../services/transaction.service';
 import type { Transaction } from '../../types/models';
-import { AuthContext } from '../contexts/AuthContext';   // ① importamos el contexto
+import { AuthContext } from '../contexts/AuthContext';
 
 const TransactionsPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { user, logout } = useContext(AuthContext);    // ② extraemos user y logout
+  const { user, logout } = useContext(AuthContext);
 
   const fetchTransactions = async () => {
     try {
@@ -28,14 +27,15 @@ const TransactionsPage = () => {
   };
 
   useEffect(() => {
-    fetchTransactions();
-  }, []);
+    if (user) {
+      fetchTransactions();
+    }
+  }, [user]);
 
   const handleNewTransaction = async () => {
     await fetchTransactions();
   };
 
-  // Si por alguna razón no hay usuario (aunque PrivateRoute lo previene)
   if (!user) {
     return <p className="p-4 text-center">Acceso denegado. Redirigiendo…</p>;
   }
@@ -70,7 +70,6 @@ const TransactionsPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* *** HEADER *** */}
       <header className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Hola, {user.email}</h1>
@@ -84,9 +83,7 @@ const TransactionsPage = () => {
         </button>
       </header>
 
-      {/* *** LAYOUT DE FORM + LIST + CHART *** */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Form Column */}
         <div className="lg:col-span-1 bg-white rounded-xl shadow-md overflow-hidden">
           <div className="p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Crear Transacción</h2>
@@ -94,7 +91,6 @@ const TransactionsPage = () => {
           </div>
         </div>
 
-        {/* List + Chart Column */}
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
             <div className="p-6">

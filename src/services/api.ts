@@ -9,9 +9,9 @@ interface ApiError {
 }
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   withCredentials: true,
-  headers: { 'Content-Type': 'application/json' }
+  headers: { 'Content-Type': 'application/json' },
 });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
@@ -25,14 +25,14 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 api.interceptors.response.use(
   (response) => {
     console.debug('📥 Response:', response.config.url, response.data);
-    return response;      // <--- devolvemos TODO el AxiosResponse
+    return response; // retorna la respuesta completa
   },
   (error: AxiosError<ApiError>) => {
     if (error.response) {
       console.error('❌ API Error:', {
         url: error.config?.url,
         status: error.response.status,
-        data: error.response.data
+        data: error.response.data,
       });
       if (error.response.status === 401) {
         window.location.href = '/login';
@@ -41,7 +41,7 @@ api.interceptors.response.use(
       const apiError: ApiError = {
         ...error.response.data,
         message: error.response.data?.message || 'Error en el servidor',
-        status: error.response.status
+        status: error.response.status,
       };
       return Promise.reject(apiError);
     }

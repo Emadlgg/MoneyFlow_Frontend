@@ -1,95 +1,66 @@
-// src/components/Transactions/TransactionList.tsx
+import React, { useMemo } from 'react';
 import { Transaction } from '../../../types/models';
 import { formatDate, formatCurrency } from '../../../utils/formatting';
 import { FiEdit, FiTrash2 } from 'react-icons/fi';
 
-interface TransactionListProps {
-  transactions?: Transaction[];              // opcional
-  onEdit?: (transaction: Transaction) => void;
+interface Props {
+  transactions?: Transaction[];
+  onEdit?: (tx: Transaction) => void;
   onDelete?: (id: number) => void;
 }
 
-const TransactionList = ({
-  transactions = [],                         // valor por defecto
+export default function TransactionList({
+  transactions = [],
   onEdit,
   onDelete
-}: TransactionListProps) => {
-  // ahora transactions es siempre un array (aunque no lo pasen)
-  const groupedTransactions = transactions.reduce((acc, transaction) => {
-    const date = new Date(transaction.date || transaction.createdAt || '')
-      .toLocaleDateString();
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(transaction);
-    return acc;
-  }, {} as Record<string, Transaction[]>);
+}: Props) {
+  // Agrupar por fecha
+  const grouped = useMemo(() => {
+    return transactions.reduce((acc, tx) => {
+      const day = new Date(tx.date || tx.createdAt || '')
+        .toLocaleDateString();
+      acc[day] = acc[day] || [];
+      acc[day].push(tx);
+      return acc;
+    }, {} as Record<string, Transaction[]>);
+  }, [transactions]);
 
-  // si no hay transacciones, lo mostramos al final
+  if (transactions.length === 0) {
+    return <div className="text-center py-8 text-gray-500">No transactions found</div>;
+  }
+
   return (
     <div className="space-y-6">
-      {Object.entries(groupedTransactions).map(([date, dailyTransactions]) => (
-        <div key={date} className="bg-white rounded-lg shadow overflow-hidden">
+      {Object.entries(grouped).map(([day, list]) => (
+        <div key={day} className="bg-white rounded-lg shadow overflow-hidden">
           <div className="bg-gray-50 px-4 py-2 border-b">
-            <h3 className="font-medium text-gray-700">{date}</h3>
+            <h3 className="font-medium text-gray-700">{day}</h3>
           </div>
           <ul className="divide-y divide-gray-200">
-            {dailyTransactions.map((transaction) => (
-              <li key={transaction.id} className="px-4 py-3 hover:bg-gray-50">
-                <div className="flex justify-between items-center">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {transaction.category}
+            {list.map(tx => (
+              <li key={tx.id} className="px-4 py-3 hover:bg-gray-50 flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{tx.category}</p>
+                  {tx.date && (
+                    <p className="text-xs text-gray-500">
+                      {formatDate(tx.date, 'time')}
                     </p>
-                    {transaction.date && (
-                      <p className="text-xs text-gray-500">
-                        {formatDate(transaction.date, 'time')}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="ml-4 flex items-center">
-                    <span className={`text-sm font-semibold ${
-                      transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {formatCurrency(transaction.amount)}
-                    </span>
-
-                    {(onEdit || onDelete) && (
-                      <div className="ml-3 flex space-x-2">
-                        {onEdit && (
-                          <button
-                            onClick={() => onEdit(transaction)}
-                            className="text-gray-400 hover:text-blue-500 transition-colors"
-                            aria-label="Edit"
-                          >
-                            <FiEdit size={16} />
-                          </button>
-                        )}
-                        {onDelete && transaction.id !== undefined && (
-                          <button
-                            onClick={() => onDelete(transaction.id!)}
-                            className="text-gray-400 hover:text-red-500 transition-colors"
-                            aria-label="Delete"
-                          >
-                            <FiTrash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  )}
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className={`font-semibold ${
+                    tx.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {formatCurrency(tx.amount)}
+                  </span>
+                  {onEdit && <button onClick={() => onEdit(tx)} aria-label="Edit"><FiEdit /></button>}
+                  {onDelete && <button onClick={() => onDelete(tx.id!)} aria-label="Delete"><FiTrash2 /></button>}
                 </div>
               </li>
             ))}
           </ul>
         </div>
       ))}
-
-      {transactions.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          No transactions found
-        </div>
-      )}
     </div>
   );
-};
-
-export default TransactionList;
+}

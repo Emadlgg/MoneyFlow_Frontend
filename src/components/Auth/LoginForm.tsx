@@ -1,83 +1,83 @@
-import React, { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { loginUser } from '../../services/auth.service';
-import { AuthContext } from '../../contexts/AuthContext';
-import '../../assets/style/login.css';
+// src/components/Auth/LoginForm.tsx
+import React, { useState, useEffect, useContext } from 'react'
+import { useNavigate, Link, Navigate } from 'react-router-dom'
+import { AuthContext } from '../../contexts/AuthContext'
+import { supabase } from '../../services/supabaseClient'
+import GoogleLoginButton from './GoogleLoginButton'
+import '../../assets/style/auth.css'
 
 export default function LoginForm() {
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError]       = useState<string | null>(null);
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError]       = useState<string|null>(null)
+  const { user }                = useContext(AuthContext)
+  const navigate                = useNavigate()
 
-  const { setUser } = useContext(AuthContext);
-  const navigate    = useNavigate();
+  // Si venimos del callback OAuth, redirige
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data:{ session } }) => {
+      if (session?.user) {
+        navigate('/transactions', { replace: true })
+      }
+    })
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    try {
-      const user = await loginUser(email, password);
-      setUser(user);
-      navigate('/transactions', { replace: true });
-    } catch (err: unknown) {
-      if (axios.isAxiosError(err) && err.response) {
-        setError(err.response.data?.error || 'Credenciales inválidas');
-      } else {
-        setError('Error al iniciar sesión');
-      }
-    }
-  };
+    e.preventDefault()
+    setError(null)
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) setError(error.message)
+  }
+
+  if (user) return <Navigate to="/transactions" replace />
 
   return (
-    <div className="login">
-      <form onSubmit={handleSubmit} className="login__form">
-        <h2 className="login__title">User Login</h2>
+    <div className="auth-page">
+      <form onSubmit={handleSubmit} className="auth-page__form">
+        <h2 className="auth-page__title">Login</h2>
+        {error && <p className="auth-page__error">{error}</p>}
 
-        {error && <p className="login__error">{error}</p>}
-
-        <div className="login__content">
-          <div className="login__box">
-            <i className="login__icon">📧</i>
-            <div className="login__box-input">
+        <div className="auth-page__content">
+          <div className="auth-page__box">
+            <i className="auth-page__icon">📧</i>
+            <div className="auth-page__box-input">
               <input
-                className="login__input"
                 type="email"
                 placeholder=" "
-                autoComplete="username"
+                className="auth-page__input"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
               />
-              <label className="login__label">Email</label>
+              <label className="auth-page__label">Email</label>
             </div>
           </div>
 
-          <div className="login__box">
-            <i className="login__icon">🔒</i>
-            <div className="login__box-input">
+          <div className="auth-page__box">
+            <i className="auth-page__icon">🔒</i>
+            <div className="auth-page__box-input">
               <input
-                className="login__input"
                 type="password"
                 placeholder=" "
-                autoComplete="current-password"
+                className="auth-page__input"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
               />
-              <label className="login__label">Contraseña</label>
+              <label className="auth-page__label">Password</label>
             </div>
           </div>
         </div>
 
-        <a href="#" className="login__forgot">Forgot Password?</a>
+        <button type="submit" className="auth-page__button">Entrar</button>
 
-        <button type="submit" className="login__button">Entrar</button>
+        <div className="text-center auth-page__separator">O</div>
+        <GoogleLoginButton/>
 
-        <p className="login__register">
-          ¿No tienes cuenta? <a href="#">Regístrate</a>
+        <p className="auth-page__register">
+          ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
         </p>
       </form>
     </div>
-  );
+  )
 }
