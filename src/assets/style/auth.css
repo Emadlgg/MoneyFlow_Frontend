@@ -180,6 +180,32 @@ img {
   font-size: var(--small-font-size);
 }
 
+.login__google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #ffffff;
+  border: 2px solid var(--white-color);
+  color: #333;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin: 1rem 0;
+}
+
+.login__google-button:hover {
+  background-color: #f0f0f0;
+}
+
+.login__google-button img {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.75rem;
+}
+
 /*=============== BREAKPOINTS ===============*/
 @media screen and (min-width: 576px) {
   .auth-page {

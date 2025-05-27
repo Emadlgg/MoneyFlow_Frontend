@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../services/supabaseClient'
+import GoogleLoginButton from './GoogleLoginButton'
 import '../../assets/style/auth.css'
 
 export default function RegisterForm() {
@@ -60,6 +61,8 @@ export default function RegisterForm() {
         </div>
 
         <button type="submit" className="auth-page__button">Registrarme</button>
+        
+           <GoogleLoginButton/>
 
         <p className="auth-page__register">
           ¿Ya tienes cuenta? <Link to="/login">Entra</Link>

@@ -14,7 +14,7 @@ export default function GoogleLoginButton() {
 
   return (
     <button onClick={handle} className="login__google-button">
-      <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" 
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
            alt="Google"/>
       Iniciar con Google
     </button>

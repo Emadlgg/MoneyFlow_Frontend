@@ -71,7 +71,6 @@ export default function LoginForm() {
 
         <button type="submit" className="auth-page__button">Entrar</button>
 
-        <div className="text-center auth-page__separator">O</div>
         <GoogleLoginButton/>
 
         <p className="auth-page__register">
