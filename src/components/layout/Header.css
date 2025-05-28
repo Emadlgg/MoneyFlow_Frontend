@@ -1,0 +1,41 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: #1f1f1f;
+  border-bottom: 1px solid #333;
+}
+
+.header__brand h1 {
+  margin: 0;
+  cursor: pointer;
+  color: #fff;
+}
+
+.header__nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.header__link {
+  color: #bbb;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.header__link:hover {
+  color: #fff;
+}
+
+.header__link--button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.header__user {
+  color: #eee;
+  margin-right: 0.5rem;
+}
