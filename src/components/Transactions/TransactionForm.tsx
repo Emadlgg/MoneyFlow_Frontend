@@ -1,69 +1,45 @@
-import { useState } from 'react';
-import { Transaction, ApiError } from '../../../types/models';
-import { createTransaction } from '../../services/transaction.service';
+// src/components/Transactions/TransactionForm.tsx
+import React, { FormEvent, useState } from 'react'
 
-interface TransactionFormProps {
-  onSuccess: () => void;
+interface Props {
+  categories: string[]
+  onAdd: (entry: { category: string; amount: number; date: string }) => void
+  type: 'Ingresos' | 'Gastos'
 }
 
-const TransactionForm = ({ onSuccess }: TransactionFormProps) => {
-  const [formData, setFormData] = useState<Omit<Transaction, 'id'>>({
-    amount: 0,
-    category: '',
-    date: new Date()
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+export default function TransactionForm({ categories, onAdd, type }: Props) {
+  const [cat, setCat] = useState('')
+  const [amt, setAmt] = useState(0)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await createTransaction(formData);
-      onSuccess();
-      setFormData({ amount: 0, category: '', date: new Date() });
-      setErrors({});
-    } catch (error) {
-      const apiError = error as ApiError;
-      setErrors(apiError.details || { general: apiError.message || 'Error desconocido' });
-    }
-  };
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault()
+    if (!cat || amt <= 0) return
+    onAdd({
+      category: cat,
+      amount: type === 'Gastos' ? -amt : amt,
+      date: new Date().toISOString(),
+    })
+    setAmt(0)
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium">Amount</label>
-        <input
-          type="number"
-          step="0.01"
-          value={formData.amount}
-          onChange={(e) => setFormData({...formData, amount: parseFloat(e.target.value) || 0})}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-        />
-        {errors.amount && <p className="text-red-500 text-xs">{errors.amount}</p>}
-      </div>
-      
-      <div>
-        <label className="block text-sm font-medium">Category</label>
-        <input
-          type="text"
-          value={formData.category}
-          onChange={(e) => setFormData({...formData, category: e.target.value})}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-        />
-        {errors.category && <p className="text-red-500 text-xs">{errors.category}</p>}
-      </div>
+    <form onSubmit={handleSubmit} className="form-inline">
+      <select value={cat} onChange={e => setCat(e.target.value)}>
+        <option value="">-- Selecciona categoría --</option>
+        {categories.map(c => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
 
-      {errors.general && (
-        <p className="text-red-500 text-xs">{errors.general}</p>
-      )}
+      <input
+        type="number"
+        value={amt}
+        onChange={e => setAmt(Number(e.target.value))}
+      />
 
-      <button 
-        type="submit" 
-        className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition"
-      >
-        Add Transaction
+      <button type="submit">
+        {type === 'Gastos' ? 'Agregar gasto' : 'Agregar ingreso'}
       </button>
     </form>
-  );
-};
-
-export default TransactionForm;
+  )
+}

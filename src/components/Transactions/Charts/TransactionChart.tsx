@@ -1,52 +1,46 @@
-import React, { useEffect, useRef, useMemo } from 'react';
-import Chart from 'chart.js/auto';
-import { Transaction } from '../../../../types/models';
+// src/components/Transactions/Charts/TransactionChart.tsx
+import React, { useMemo } from 'react'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts'      // <-- asegúrate que esto ya existe en node_modules
+import { Transaction } from '../../../services/transaction.service'
 
 interface Props {
-  transactions?: Transaction[];
+  transactions: Transaction[]
 }
 
-export default function TransactionChart({ transactions = [] }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef  = useRef<Chart>();
+export default function TransactionChart({ transactions }: Props) {
+  // agrupar por mes…
+  const data = useMemo(() => {
+    const acc: Record<string, { month: string; ingreso: number; gasto: number }> = {}
+    for (const tx of transactions) {
+      const d = new Date(tx.date)
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+      if (!acc[key]) acc[key] = { month: key, ingreso: 0, gasto: 0 }
+      if (tx.amount >= 0) acc[key].ingreso += tx.amount
+      else acc[key].gasto += Math.abs(tx.amount)
+    }
+    return Object.values(acc).sort((a, b) => a.month.localeCompare(b.month))
+  }, [transactions])
 
-  const { labels, data } = useMemo(() => {
-    const cats = Array.from(new Set(transactions.map(t => t.category)));
-    const sums = cats.map(cat =>
-      transactions.filter(t => t.category === cat)
-                  .reduce((acc, t) => acc + t.amount, 0)
-    );
-    return { labels: cats, data: sums };
-  }, [transactions]);
-
-  useEffect(() => {
-    if (!canvasRef.current || labels.length === 0) return;
-
-    chartRef.current?.destroy();
-    chartRef.current = new Chart(canvasRef.current, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Gastos por categoría',
-          data,
-          backgroundColor: labels.map(() => 'rgba(54,162,235,0.7)')
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
-    });
-
-    return () => { chartRef.current?.destroy(); };
-  }, [labels, data]);
-
-  if (labels.length === 0) {
-    return <p className="text-center text-gray-500">Sin datos para el gráfico</p>;
-  }
-
-  return <canvas ref={canvasRef} />;
+  return (
+    <div style={{ width: '100%', height: 300 }}>
+      <ResponsiveContainer>
+        <BarChart data={data}>
+          <XAxis dataKey="month" />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="ingreso" name="Ingresos" />
+          <Bar dataKey="gasto" name="Gastos" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
 }

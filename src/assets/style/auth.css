@@ -1,220 +1,145 @@
-/*=============== GOOGLE FONTS ===============*/
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap");
-
-/*=============== VARIABLES CSS ===============*/
-:root {
-  /*========== Colors ==========*/
-  --white-color: hsl(0, 0%, 100%);
-  --black-color: hsl(0, 0%, 0%);
-  /*========== Font and typography ==========*/
-  --body-font: "Poppins", sans-serif;
-  --h1-font-size: 1.75rem;
-  --normal-font-size: 1rem;
-  --small-font-size: .813rem;
-  /*========== Font weight ==========*/
-  --font-medium: 500;
-}
-
-/*=============== BASE ===============*/
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-body,
-input,
-button {
-  font-size: var(--normal-font-size);
-  font-family: var(--body-font);
-}
-body {
-  color: var(--white-color);
-  flex-direction: column;
-}
-input,
-button {
-  border: none;
-  outline: none;
-}
-a {
-  text-decoration: none;
-}
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-/*=============== AUTH (Login & Register) ===============*/
+/* contenedor full-screen */
 .auth-page {
-  position: relative;
-  height: 100vh;
-  display: grid;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #111; /* fondo oscuro */
 }
-.auth-page__img {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
+
+/* tarjeta del form */
 .auth-page__form {
-  position: relative;
-  background-color: hsla(0, 0%, 10%, 0.1);
-  border: 2px solid var(--white-color);
-  margin-inline: 1.5rem;
-  padding: 2.5rem 1.5rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.3);
   border-radius: 1rem;
-  backdrop-filter: blur(8px);
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
 }
+
+/* título */
 .auth-page__title {
+  margin-bottom: 1.5rem;
+  color: #fff;
   text-align: center;
-  font-size: var(--h1-font-size);
-  font-weight: var(--font-medium);
-  margin-bottom: 2rem;
+  font-size: 1.75rem;
+  font-weight: 500;
 }
-.auth-page__content,
-.auth-page__box {
-  display: grid;
+
+/* mensaje de error */
+.auth-page__error {
+  color: #f87171;
+  margin-bottom: 1rem;
+  text-align: center;
 }
+
+/* agrupa inputs */
 .auth-page__content {
-  row-gap: 1.75rem;
+  display: grid;
+  row-gap: 1.25rem;
   margin-bottom: 1.5rem;
 }
+
+/* cada input + label */
 .auth-page__box {
-  grid-template-columns: max-content 1fr;
-  align-items: center;
-  column-gap: 0.75rem;
-  border-bottom: 2px solid var(--white-color);
-  margin-top: 1rem;
+  position: relative;
+  border-bottom: 2px solid rgba(255,255,255,0.3);
 }
-.auth-page__icon,
-.auth-page__eye {
-  font-size: 1.25rem;
-}
+
+/* input puro */
 .auth-page__input {
   width: 100%;
-  padding-block: 0.8rem;
-  background: none;
-  color: var(--white-color);
-  position: relative;
-  z-index: 1;
+  background: transparent;
+  padding: 0.75rem 0;
+  color: #fff;
+  font-size: 1rem;
 }
-.auth-page__box-input {
-  position: relative;
-}
+
+/* label flotante */
 .auth-page__label {
   position: absolute;
   left: 0;
-  top: 13px;
-  font-weight: var(--font-medium);
-  transition: top 0.3s, font-size 0.3s;
+  top: 0.75rem;
+  color: rgba(255,255,255,0.7);
+  pointer-events: none;
+  transition: transform 0.2s, font-size 0.2s;
 }
-.auth-page__eye {
-  position: absolute;
-  right: 0;
-  top: 18px;
-  z-index: 10;
-  cursor: pointer;
+
+/* al focus o si tiene valor, sube el label */
+.auth-page__input:focus + .auth-page__label,
+.auth-page__input:not(:placeholder-shown) + .auth-page__label {
+  transform: translateY(-1.5rem);
+  font-size: 0.85rem;
+  color: #fff;
 }
-.auth-page__box:nth-child(2) input {
-  padding-right: 1.8rem;
-}
-.auth-page__check,
-.auth-page__check-group {
+
+/* checkbox + forgot */
+.auth-page__options {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-}
-.auth-page__check {
+  align-items: center;
   margin-bottom: 1.5rem;
 }
-.auth-page__check-label,
-.auth-page__forgot,
-.auth-page__register {
-  font-size: var(--small-font-size);
+
+.auth-page__check {
+  display: flex;
+  align-items: center;
+  color: #ccc;
+  font-size: 0.9rem;
 }
-.auth-page__check-group {
-  column-gap: 0.5rem;
-}
+
 .auth-page__check-input {
-  width: 16px;
-  height: 16px;
+  margin-right: 0.5rem;
+  accent-color: #3b82f6;
 }
+
 .auth-page__forgot {
-  color: var(--white-color);
+  font-size: 0.9rem;
+  color: #3b82f6;
+  text-decoration: none;
 }
 .auth-page__forgot:hover {
   text-decoration: underline;
 }
+
+/* botón principal */
 .auth-page__button {
   width: 100%;
-  padding: 1rem;
-  margin-top: 1rem;
+  padding: 0.9rem 0;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
   border-radius: 0.5rem;
-  font-weight: var(--font-medium);
   cursor: pointer;
-  margin-bottom: 2rem;
-  border: 2px solid var(--white-color);
+  transition: background 0.2s;
 }
+.auth-page__button:hover {
+  background: #2563eb;
+}
+
+/* enlace a registro */
 .auth-page__register {
+  margin-top: 1rem;
   text-align: center;
+  font-size: 0.9rem;
+  color: #ccc;
 }
 .auth-page__register a {
-  color: var(--white-color);
-  font-weight: var(--font-medium);
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
 }
 .auth-page__register a:hover {
   text-decoration: underline;
 }
 
-/* Label moves up on focus */
-.auth-page__input:focus + .auth-page__label {
-  top: -12px;
-  font-size: var(--small-font-size);
-}
-
-/* Label stays up if input has content */
-.auth-page__input:not(:placeholder-shown).auth-page__input:not(:focus) + .auth-page__label {
-  top: -12px;
-  font-size: var(--small-font-size);
-}
-
-.login__google-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #ffffff;
-  border: 2px solid var(--white-color);
-  color: #333;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  width: 100%;
-  font-weight: var(--font-medium);
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  margin: 1rem 0;
-}
-
-.login__google-button:hover {
-  background-color: #f0f0f0;
-}
-
-.login__google-button img {
-  width: 1.5rem;
-  height: 1.5rem;
-  margin-right: 0.75rem;
-}
-
-/*=============== BREAKPOINTS ===============*/
-@media screen and (min-width: 576px) {
-  .auth-page {
-    justify-content: center;
-  }
+/* responsivo */
+@media (min-width: 576px) {
   .auth-page__form {
-    width: 432px;
-    padding: 4rem 3rem 3.5rem;
-    border-radius: 1.5rem;
+    padding: 3rem 2.5rem;
   }
   .auth-page__title {
     font-size: 2rem;
