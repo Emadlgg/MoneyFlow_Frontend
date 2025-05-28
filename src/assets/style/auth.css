@@ -1,147 +1,373 @@
-/* contenedor full-screen */
+/* src/assets/style/auth.css */
+
+/* --------------------------------------------------
+   1. Contenedor full-screen con fondo negro
+-------------------------------------------------- */
 .auth-page {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: #111; /* fondo oscuro */
+  background: #0a0a0a;
+  margin: 0;
+  padding: 1rem;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* tarjeta del form */
+/* --------------------------------------------------
+   2. Tarjeta del formulario oscura
+-------------------------------------------------- */
 .auth-page__form {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 1rem;
-  padding: 2.5rem 2rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 3rem 2.5rem;
   width: 100%;
-  max-width: 400px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-}
-
-/* título */
-.auth-page__title {
-  margin-bottom: 1.5rem;
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
   color: #fff;
-  text-align: center;
-  font-size: 1.75rem;
-  font-weight: 500;
+  position: relative;
 }
 
-/* mensaje de error */
+/* --------------------------------------------------
+   3. Título y mensaje de error
+-------------------------------------------------- */
+.auth-page__title {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
 .auth-page__error {
-  color: #f87171;
-  margin-bottom: 1rem;
+  color: #ff4757;
   text-align: center;
-}
-
-/* agrupa inputs */
-.auth-page__content {
-  display: grid;
-  row-gap: 1.25rem;
   margin-bottom: 1.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 71, 87, 0.1);
+  border: 1px solid rgba(255, 71, 87, 0.3);
+  border-radius: 8px;
+  font-size: 0.9rem;
 }
 
-/* cada input + label */
+/* --------------------------------------------------
+   4. Agrupador de campos
+-------------------------------------------------- */
+.auth-page__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* --------------------------------------------------
+   5. Cada fila de campo
+-------------------------------------------------- */
 .auth-page__box {
   position: relative;
-  border-bottom: 2px solid rgba(255,255,255,0.3);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-/* input puro */
-.auth-page__input {
-  width: 100%;
-  background: transparent;
-  padding: 0.75rem 0;
-  color: #fff;
-  font-size: 1rem;
+/* Icono */
+.auth-page__icon {
+  flex: 0 0 auto;
+  font-size: 1.25rem;
+  padding: 0.75rem;
+  background: #2a2a2a;
+  border-radius: 8px;
+  border: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  box-sizing: border-box;
+  color: #999;
 }
 
-/* label flotante */
+.auth-page__box-input {
+  flex: 1;
+  position: relative;
+}
+
+/* --------------------------------------------------
+   6. Label flotante
+-------------------------------------------------- */
 .auth-page__label {
   position: absolute;
-  left: 0;
-  top: 0.75rem;
-  color: rgba(255,255,255,0.7);
+  top: 50%;
+  left: 1rem;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  color: #666;
   pointer-events: none;
-  transition: transform 0.2s, font-size 0.2s;
+  transition: all 0.3s ease;
+  background: transparent;
+  padding: 0 0.25rem;
+  z-index: 1;
 }
 
-/* al focus o si tiene valor, sube el label */
+/* --------------------------------------------------
+   7. Input oscuro
+-------------------------------------------------- */
+.auth-page__input {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  background: #2a2a2a;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 8px;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.auth-page__input:focus {
+  outline: none;
+  border-color: #555;
+  background: #333;
+}
+
 .auth-page__input:focus + .auth-page__label,
 .auth-page__input:not(:placeholder-shown) + .auth-page__label {
-  transform: translateY(-1.5rem);
-  font-size: 0.85rem;
-  color: #fff;
+  top: -8px;
+  font-size: 0.8rem;
+  color: #999;
+  background: #1a1a1a;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
 }
 
-/* checkbox + forgot */
-.auth-page__options {
+.auth-page__input::placeholder {
+  color: transparent;
+}
+
+/* --------------------------------------------------
+   8. Grupo de opciones
+-------------------------------------------------- */
+.auth-page__check-group {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  padding: 0.5rem 0;
 }
 
 .auth-page__check {
   display: flex;
   align-items: center;
-  color: #ccc;
+  gap: 0.75rem;
   font-size: 0.9rem;
+  color: #ccc;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.auth-page__check:hover {
+  color: #fff;
 }
 
 .auth-page__check-input {
-  margin-right: 0.5rem;
-  accent-color: #3b82f6;
+  width: 18px;
+  height: 18px;
+  accent-color: #555;
+  cursor: pointer;
+}
+
+.auth-page__check-label {
+  cursor: pointer;
 }
 
 .auth-page__forgot {
   font-size: 0.9rem;
-  color: #3b82f6;
+  color: #999;
   text-decoration: none;
-}
-.auth-page__forgot:hover {
-  text-decoration: underline;
+  transition: all 0.2s ease;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
 }
 
-/* botón principal */
+.auth-page__forgot:hover {
+  color: #fff;
+  background: #333;
+  text-decoration: none;
+}
+
+/* --------------------------------------------------
+   9. Botón principal
+-------------------------------------------------- */
 .auth-page__button {
   width: 100%;
-  padding: 0.9rem 0;
-  background: #3b82f6;
+  padding: 1rem 0;
+  background: #333;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: 1px solid #444;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+}
+
+.auth-page__button:hover {
+  background: #444;
+  border-color: #555;
+  transform: translateY(-1px);
+}
+
+.auth-page__button:active {
+  transform: translateY(0);
+}
+
+/* --------------------------------------------------
+   10. Enlaces de navegación
+-------------------------------------------------- */
+.auth-page__register {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: #999;
+}
+
+.auth-page__register a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  margin-left: 0.25rem;
+}
+
+.auth-page__register a:hover {
+  background: #333;
+  text-decoration: none;
+}
+
+/* --------------------------------------------------
+   11. Botón de Google
+-------------------------------------------------- */
+.google-login-button {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: #2a2a2a;
   color: #fff;
   font-size: 1rem;
   font-weight: 500;
-  border: none;
-  border-radius: 0.5rem;
+  border: 1px solid #333;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
-}
-.auth-page__button:hover {
-  background: #2563eb;
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
 }
 
-/* enlace a registro */
-.auth-page__register {
-  margin-top: 1rem;
-  text-align: center;
-  font-size: 0.9rem;
-  color: #ccc;
+.google-login-button:hover {
+  background: #333;
+  border-color: #444;
+  transform: translateY(-1px);
 }
-.auth-page__register a {
-  color: #3b82f6;
-  text-decoration: none;
+
+.google-login-button:active {
+  transform: translateY(0);
+}
+
+.google-login-button svg,
+.google-login-button img {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------
+   12. Separador
+-------------------------------------------------- */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #333;
+}
+
+.auth-divider span {
+  padding: 0 1rem;
+  font-size: 0.9rem;
+  color: #666;
   font-weight: 500;
 }
-.auth-page__register a:hover {
-  text-decoration: underline;
+
+/* --------------------------------------------------
+   13. Responsivo
+-------------------------------------------------- */
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 0.5rem;
+  }
+  
+  .auth-page__form {
+    padding: 2rem 1.5rem;
+    border-radius: 8px;
+  }
+  
+  .auth-page__title {
+    font-size: 1.75rem;
+  }
+  
+  .auth-page__box {
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+  
+  .auth-page__icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
 }
 
-/* responsivo */
 @media (min-width: 576px) {
   .auth-page__form {
-    padding: 3rem 2.5rem;
+    padding: 3.5rem 3rem;
   }
+  
   .auth-page__title {
-    font-size: 2rem;
+    font-size: 2.25rem;
+    margin-bottom: 2.5rem;
   }
+}
+
+/* --------------------------------------------------
+   14. Animaciones simples
+-------------------------------------------------- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-page__form {
+  animation: fadeIn 0.5s ease;
 }

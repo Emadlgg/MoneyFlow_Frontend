@@ -1,0 +1,43 @@
+/* contenedor principal */
+.reports-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+/* título */
+.reports-title {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+/* estados */
+.reports-loading,
+.reports-error {
+  text-align: center;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+}
+
+.reports-error {
+  color: #ff5555;
+}
+
+/* envoltorio del chart */
+.reports-chart-wrapper {
+  background: #1f1f1f;
+  padding: 1rem;
+  border-radius: 6px;
+}
+
+/* asegurar responsividad */
+@media (max-width: 480px) {
+  .reports-title {
+    font-size: 1.5rem;
+  }
+  .reports-chart-wrapper {
+    padding: 0.5rem;
+  }
+}

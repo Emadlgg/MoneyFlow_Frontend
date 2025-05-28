@@ -30,7 +30,6 @@ export default function RegisterForm() {
 
         <div className="auth-page__content">
           <div className="auth-page__box">
-            <i className="auth-page__icon">📧</i>
             <div className="auth-page__box-input">
               <input
                 type="email"
@@ -45,7 +44,6 @@ export default function RegisterForm() {
           </div>
 
           <div className="auth-page__box">
-            <i className="auth-page__icon">🔒</i>
             <div className="auth-page__box-input">
               <input
                 type="password"
@@ -62,7 +60,11 @@ export default function RegisterForm() {
 
         <button type="submit" className="auth-page__button">Registrarme</button>
         
-           <GoogleLoginButton/>
+        <div className="auth-divider">
+          <span>O</span>
+        </div>
+        
+        <GoogleLoginButton/>
 
         <p className="auth-page__register">
           ¿Ya tienes cuenta? <Link to="/login">Entra</Link>

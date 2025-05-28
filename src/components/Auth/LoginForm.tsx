@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import '../../assets/style/auth.css'    // tu fichero con .auth-page y .auth-page__form...
+import GoogleLoginButton from './GoogleLoginButton'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
@@ -63,6 +64,12 @@ export default function LoginForm() {
         <button type="submit" className="auth-page__button">
           Entrar
         </button>
+                
+                <div className="auth-divider">
+                  <span>O</span>
+                </div>
+                
+                <GoogleLoginButton/>
 
         <p className="auth-page__register">
           ¿No tienes cuenta? <NavLink to="/register">Regístrate</NavLink>
