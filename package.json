@@ -7,7 +7,25 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "jest-environment-jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "testMatch": [
+      "**/__tests__/**/*.js",
+      "**/?(*.)+(spec|test).js"
+    ],
+    "collectCoverageFrom": [
+      "js/**/*.js",
+      "assets/js/**/*.js",
+      "!**/node_modules/**"
+    ]
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
@@ -23,6 +41,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@testing-library/dom": "^10.4.0",
+    "@testing-library/jest-dom": "^6.6.3",
     "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",
     "@vitejs/plugin-react": "^4.4.1",
@@ -30,8 +50,24 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^15.15.0",
+    "jest": "^30.0.4",
+    "jest-environment-jsdom": "^30.0.4",
+    "jsdom": "^26.1.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0"
-  }
+  },
+  "description": "<div align=\"center\">\r   <img src=\"https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB\" alt=\"React\">\r   <img src=\"https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white\" alt=\"TypeScript\">\r   <img src=\"https://img.shields.io/badge/Vite-B73BFE?style=for-the-badge&logo=vite&logoColor=FFD62E\" alt=\"Vite\">\r   <img src=\"https://img.shields.io/badge/Axios-5A29E4?style=for-the-badge&logo=axios&logoColor=white\" alt=\"Axios\">\r </div>",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Emadlgg/MoneyFlow_Frontend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Emadlgg/MoneyFlow_Frontend/issues"
+  },
+  "homepage": "https://github.com/Emadlgg/MoneyFlow_Frontend#readme"
 }
