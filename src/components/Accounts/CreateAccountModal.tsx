@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
+import { useAccount } from '../../contexts/AccountContext'
 
 interface CreateAccountModalProps {
   isOpen: boolean
   onClose: () => void
-  onCreateAccount: (name: string, type: string, balance: number) => Promise<void>
 }
 
-export default function CreateAccountModal({ isOpen, onClose, onCreateAccount }: CreateAccountModalProps) {
+export default function CreateAccountModal({ isOpen, onClose }: CreateAccountModalProps) {
+  const { createAccount } = useAccount() // Usar el contexto
   const [formData, setFormData] = useState({
     name: '',
     type: 'checking',
@@ -34,26 +35,12 @@ export default function CreateAccountModal({ isOpen, onClose, onCreateAccount }:
 
     setIsLoading(true)
     try {
-      console.log('Form data being submitted:', formData)
-      await onCreateAccount(formData.name.trim(), formData.type, formData.balance)
+      await createAccount(formData.name.trim(), formData.type, formData.balance) // Llamar a la función del contexto
       setFormData({ name: '', type: 'checking', balance: 0 })
       onClose()
     } catch (error: any) {
       console.error('Error creating account:', error)
-      
-      let errorMessage = 'Error al crear la cuenta. Inténtalo de nuevo.'
-      
-      if (error?.message) {
-        if (error.message.includes('balance')) {
-          errorMessage = 'Error: La columna balance no existe en la base de datos. Contacta al administrador.'
-        } else if (error.message.includes('PGRST204')) {
-          errorMessage = 'Error de esquema de base de datos. Verifica la configuración.'
-        } else {
-          errorMessage = error.message
-        }
-      }
-      
-      setError(errorMessage)
+      setError(error.message || 'Error al crear la cuenta.')
     } finally {
       setIsLoading(false)
     }

@@ -17,7 +17,7 @@ interface Transaction {
 export default function ExpensesPage() {
   const { user } = useAuth()
   const { selectedAccountId } = useSelectedAccount()
-  const { accounts } = useAccount()
+  const { accounts, refetch: refetchAccounts } = useAccount()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
@@ -107,6 +107,9 @@ export default function ExpensesPage() {
         category: '',
         date: new Date().toISOString().split('T')[0]
       })
+
+      // Refrescar el saldo de la cuenta
+      refetchAccounts()
 
     } catch (error) {
       console.error('Error adding expense:', error)

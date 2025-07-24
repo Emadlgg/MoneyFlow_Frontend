@@ -3,27 +3,15 @@ import { supabase } from '../services/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { useSelectedAccount } from '../contexts/SelectedAccountContext'
 import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
+  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts'
 
+// Interfaz actualizada: quitamos 'type' y 'description' que no usamos aquí
 interface Transaction {
   id: string
   amount: number
-  type: 'income' | 'expense'
   category: string
-  description: string
   date: string
   account_id: string
 }
@@ -81,137 +69,112 @@ export default function ReportsPage() {
     end: formatDate(new Date().toISOString(), 'yyyy-MM-dd')
   })
 
-  // Estados para los datos de las gráficas
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([])
   const [incomeCategories, setIncomeCategories] = useState<CategoryData[]>([])
   const [expenseCategories, setExpenseCategories] = useState<CategoryData[]>([])
 
-  const fetchTransactions = async () => {
-    if (!user || !selectedAccountId) return
-
-    try {
-      setLoading(true)
-      console.log('📊 Fetching transactions for reports...')
-
-      let query = supabase
-        .from('transactions')
-        .select('*')
-        .eq('account_id', selectedAccountId)
-        .gte('date', dateRange.start)
-        .lte('date', dateRange.end)
-        .order('date', { ascending: true })
-
-      const { data, error } = await query
-
-      if (error) {
-        console.error('Error fetching transactions:', error)
-        throw error
-      }
-
-      console.log('📊 Transactions loaded:', data?.length)
-      setTransactions(data || [])
-      processChartData(data || [])
-    } catch (error) {
-      console.error('Error in fetchTransactions:', error)
-      setTransactions([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const processChartData = (transactions: Transaction[]) => {
-    console.log('📊 Processing chart data...')
-
-    // Procesar datos mensuales
+  // CORRECCIÓN: La función ahora acepta un saldo inicial para el cálculo acumulativo
+  const processChartData = (transactionsToProcess: Transaction[], startingBalance: number) => {
     const monthlyMap = new Map<string, { income: number; expense: number }>()
-
-    // Inicializar últimos 6 meses
-    for (let i = 5; i >= 0; i--) {
-      const date = subtractMonths(new Date(), i)
-      const monthKey = formatDate(date.toISOString(), 'yyyy-MM')
-      monthlyMap.set(monthKey, { income: 0, expense: 0 })
-    }
-
-    // Agrupar transacciones por mes
-    transactions.forEach(transaction => {
-      const monthKey = formatDate(transaction.date, 'yyyy-MM')
-      const existing = monthlyMap.get(monthKey)
-      
-      if (existing) {
-        if (transaction.type === 'income') {
-          existing.income += transaction.amount
-        } else {
-          existing.expense += transaction.amount
-        }
-      }
-    })
-
-    // Convertir a array para las gráficas
-    const monthlyArray: MonthlyData[] = Array.from(monthlyMap.entries()).map(([monthKey, data]) => {
-      const date = new Date(monthKey + '-01')
-      return {
-        month: formatDate(date.toISOString(), 'MMM yyyy'),
-        income: data.income,
-        expense: data.expense,
-        balance: data.income - data.expense
-      }
-    })
-
-    setMonthlyData(monthlyArray)
-
-    // Procesar categorías de ingresos
     const incomeMap = new Map<string, number>()
     const expenseMap = new Map<string, number>()
 
-    transactions.forEach(transaction => {
-      if (transaction.type === 'income') {
+    transactionsToProcess.forEach(transaction => {
+      const monthKey = formatDate(transaction.date, 'yyyy-MM')
+      if (!monthlyMap.has(monthKey)) {
+        monthlyMap.set(monthKey, { income: 0, expense: 0 })
+      }
+      const monthlyEntry = monthlyMap.get(monthKey)!
+
+      if (transaction.amount > 0) {
+        monthlyEntry.income += transaction.amount
         incomeMap.set(transaction.category, (incomeMap.get(transaction.category) || 0) + transaction.amount)
       } else {
-        expenseMap.set(transaction.category, (expenseMap.get(transaction.category) || 0) + transaction.amount)
+        const expenseValue = Math.abs(transaction.amount)
+        monthlyEntry.expense += expenseValue
+        expenseMap.set(transaction.category, (expenseMap.get(transaction.category) || 0) + expenseValue)
       }
     })
 
-    // Colores para las categorías
-    const colors = [
-      '#28a745', '#dc3545', '#007bff', '#ffc107', '#6f42c1',
-      '#e83e8c', '#fd7e14', '#20c997', '#17a2b8', '#6c757d'
-    ]
+    let runningBalance = startingBalance; // Empezamos con el saldo anterior al rango
+    const monthlyArray: MonthlyData[] = Array.from(monthlyMap.entries())
+      .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+      .map(([monthKey, data]) => {
+        // CORRECCIÓN: El balance ahora es acumulativo
+        runningBalance += data.income - data.expense;
+        const date = new Date(monthKey + '-02T12:00:00Z')
+        return {
+          month: formatDate(date.toISOString(), 'MMM yyyy'),
+          income: data.income,
+          expense: data.expense,
+          balance: runningBalance // Usamos el saldo acumulado
+        }
+      })
+    
+    setMonthlyData(monthlyArray)
 
-    // Convertir a arrays para pie charts
-    const incomeArray: CategoryData[] = Array.from(incomeMap.entries()).map(([name, value], index) => ({
-      name,
-      value,
-      color: colors[index % colors.length]
-    }))
-
-    const expenseArray: CategoryData[] = Array.from(expenseMap.entries()).map(([name, value], index) => ({
-      name,
-      value,
-      color: colors[index % colors.length]
-    }))
-
+    const colors = ['#28a745', '#007bff', '#ffc107', '#6f42c1', '#fd7e14']
+    const expenseColors = ['#dc3545', '#e83e8c', '#6c757d', '#20c997', '#17a2b8']
+    const incomeArray: CategoryData[] = Array.from(incomeMap.entries()).map(([name, value], index) => ({ name, value, color: colors[index % colors.length] }))
+    const expenseArray: CategoryData[] = Array.from(expenseMap.entries()).map(([name, value], index) => ({ name, value, color: expenseColors[index % expenseColors.length] }))
     setIncomeCategories(incomeArray)
     setExpenseCategories(expenseArray)
-
-    console.log('📊 Chart data processed:', {
-      monthly: monthlyArray.length,
-      incomeCategories: incomeArray.length,
-      expenseCategories: expenseArray.length
-    })
   }
 
   useEffect(() => {
-    fetchTransactions()
+    const fetchAndProcessData = async () => {
+      if (!user || !selectedAccountId) {
+        setTransactions([])
+        processChartData([], 0)
+        return
+      }
+      setLoading(true)
+      try {
+        // 1. Obtener el saldo ANTES del rango de fechas seleccionado
+        const { data: priorTransactions, error: priorError } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('account_id', selectedAccountId)
+          .lt('date', dateRange.start)
+
+        if (priorError) throw priorError
+        const startingBalance = priorTransactions.reduce((sum, t) => sum + t.amount, 0)
+
+        // 2. Obtener las transacciones DENTRO del rango de fechas
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('id, amount, category, date, account_id')
+          .eq('account_id', selectedAccountId)
+          .gte('date', dateRange.start)
+          .lte('date', dateRange.end)
+          .order('date', { ascending: true })
+
+        if (error) throw error
+        const fetchedTransactions = data || []
+        setTransactions(fetchedTransactions)
+        
+        // 3. Procesar los datos pasando el saldo inicial
+        processChartData(fetchedTransactions, startingBalance)
+
+      } catch (error) {
+        console.error('Error fetching report data:', error)
+        setTransactions([])
+        processChartData([], 0)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAndProcessData()
   }, [user, selectedAccountId, dateRange])
 
-  // Calcular totales
+  // CORRECCIÓN: Calcular totales basados en el signo del monto
   const totalIncome = transactions
-    .filter(t => t.type === 'income')
+    .filter(t => t.amount > 0)
     .reduce((sum, t) => sum + t.amount, 0)
 
   const totalExpense = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0)
+    .filter(t => t.amount < 0)
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
 
   const netBalance = totalIncome - totalExpense
 
@@ -396,7 +359,7 @@ export default function ReportsPage() {
         )}
       </div>
 
-      {transactions.length === 0 && (
+      {transactions.length === 0 && !loading && (
         <div className="no-data">
           <h3>📭 No hay datos para mostrar</h3>
           <p>No se encontraron transacciones en el rango de fechas seleccionado.</p>

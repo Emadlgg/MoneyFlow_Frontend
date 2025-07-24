@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { useAuth } from './AuthContext'
 
@@ -13,152 +13,95 @@ interface Account {
 
 interface AccountContextValue {
   accounts: Account[]
-  loading: boolean
+  refetch: () => void
+  isLoading: boolean
+  error: string | null
   createAccount: (name: string, type: string, balance: number) => Promise<void>
-  updateAccount: (id: string, updates: Partial<Account>) => Promise<void>
-  deleteAccount: (id: string) => Promise<void>
-  refetch: () => Promise<void>
+  deleteAccount: (accountId: string) => Promise<void>
 }
 
 const AccountContext = createContext<AccountContextValue | undefined>(undefined)
 
-export function AccountProvider({ children }: { children: ReactNode }) {
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [loading, setLoading] = useState(true)
+export const AccountProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth()
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     if (!user) {
       setAccounts([])
-      setLoading(false)
+      setIsLoading(false)
       return
     }
 
+    setIsLoading(true)
+    setError(null)
     try {
-      setLoading(true)
-      console.log('Fetching accounts for user:', user.id)
-      
       const { data, error } = await supabase
         .from('accounts')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('name', { ascending: true })
 
-      if (error) {
-        console.error('Error fetching accounts:', error)
-        throw error
-      }
-      
-      console.log('Fetched accounts:', data)
+      if (error) throw error
       setAccounts(data || [])
-    } catch (error) {
-      console.error('Error fetching accounts:', error)
-      setAccounts([])
+    } catch (err: any) {
+      console.error("Error fetching accounts:", err)
+      setError(err.message || 'Failed to fetch accounts')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
-  }
+  }, [user])
 
   useEffect(() => {
     fetchAccounts()
-  }, [user])
+  }, [fetchAccounts])
 
   const createAccount = async (name: string, type: string, balance: number) => {
-    if (!user) throw new Error('User not authenticated')
+    if (!user) throw new Error("Usuario no autenticado.");
 
-    try {
-      console.log('Creating account:', { name, type, balance, user_id: user.id })
-      
-      const { data, error } = await supabase
-        .from('accounts')
-        .insert([{
-          name,
-          type,
-          balance,
-          user_id: user.id
-        }])
-        .select()
-        .single()
+    const { data: newAccount, error: accountError } = await supabase
+      .from('accounts')
+      .insert({ user_id: user.id, name, type, balance })
+      .select()
+      .single();
 
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
-      }
+    if (accountError) throw accountError;
+
+    if (balance > 0) {
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert({ user_id: user.id, account_id: newAccount.id, amount: balance, category: 'Saldo Inicial', date: new Date().toISOString() });
       
-      console.log('Account created successfully:', data)
-      setAccounts(prev => [data, ...prev])
-    } catch (error) {
-      console.error('Error creating account:', error)
-      throw error
+      if (transactionError) throw transactionError;
     }
-  }
+    
+    await fetchAccounts(); // Refresca la lista
+  };
 
-  const updateAccount = async (id: string, updates: Partial<Account>) => {
-    try {
-      console.log('Updating account:', id, updates)
-      
-      const { data, error } = await supabase
-        .from('accounts')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .eq('user_id', user?.id)
-        .select()
-        .single()
+  const deleteAccount = async (accountId: string) => {
+    const { error } = await supabase
+      .from('accounts')
+      .delete()
+      .eq('id', accountId);
 
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
-      }
-      
-      console.log('Account updated successfully:', data)
-      setAccounts(prev => prev.map(account => 
-        account.id === id ? { ...account, ...data } : account
-      ))
-    } catch (error) {
-      console.error('Error updating account:', error)
-      throw error
-    }
-  }
+    if (error) throw error;
+    
+    await fetchAccounts(); // Refresca la lista
+  };
 
-  const deleteAccount = async (id: string) => {
-    try {
-      console.log('Deleting account:', id)
-      
-      const { error } = await supabase
-        .from('accounts')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id)
-
-      if (error) {
-        console.error('Supabase error:', error)
-        throw error
-      }
-      
-      console.log('Account deleted successfully')
-      setAccounts(prev => prev.filter(account => account.id !== id))
-    } catch (error) {
-      console.error('Error deleting account:', error)
-      throw error
-    }
-  }
-
-  const refetch = async () => {
-    await fetchAccounts()
+  const value = {
+    accounts,
+    refetch: fetchAccounts,
+    isLoading,
+    error,
+    createAccount,
+    deleteAccount
   }
 
   return (
-    <AccountContext.Provider value={{ 
-      accounts, 
-      loading, 
-      createAccount, 
-      updateAccount, 
-      deleteAccount,
-      refetch 
-    }}>
+    <AccountContext.Provider value={value}>
       {children}
     </AccountContext.Provider>
   )

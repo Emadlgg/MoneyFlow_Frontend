@@ -5,7 +5,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSelectedAccount } from '../contexts/SelectedAccountContext'
 import { useAccount } from '../contexts/AccountContext'
 import CategoryManager from '../components/Categories/CategoryManager'
-
 import './incomes.css'
 
 interface Transaction {
@@ -19,7 +18,7 @@ interface Transaction {
 export default function IncomesPage() {
   const { user } = useAuth()
   const { selectedAccountId } = useSelectedAccount()
-  const { accounts } = useAccount()
+  const { accounts, refetch: refetchAccounts } = useAccount()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
@@ -111,8 +110,8 @@ export default function IncomesPage() {
       })
 
       // Refrescar el saldo de la cuenta
-      // Aquí podrías llamar a una función para actualizar el saldo
-      
+      refetchAccounts()
+
     } catch (error) {
       console.error('Error adding income:', error)
       alert('Error al agregar ingreso. Inténtalo de nuevo.')
