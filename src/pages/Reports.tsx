@@ -3,6 +3,8 @@ import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useSelectedAccount } from '../contexts/SelectedAccountContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Sector } from 'recharts';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import { AccountReportPDF } from '../components/AccountReportPDF';
 import './reports.css';
 
 // --- Interfaces ---
@@ -150,67 +152,82 @@ export default function ReportsPage() {
     return (
         <div className="reports-page">
             <h2 className="reports-title">Reportes</h2>
-
-            <div className="date-filter-container">
-                <div className="form-group">
-                    <label htmlFor="start">Desde:</label>
-                    <input type="date" id="start" name="start" value={dateRange.start} onChange={handleDateChange} />
-                </div>
-                <div className="form-group">
-                    <label htmlFor="end">Hasta:</label>
-                    <input type="date" id="end" name="end" value={dateRange.end} onChange={handleDateChange} />
-                </div>
-            </div>
-
-            <div className="summary-cards">
-                <div className="card"><h4 >Ingresos Totales</h4><p className="income">${reportData.totalIncome.toLocaleString()}</p></div>
-                <div className="card"><h4>Gastos Totales</h4><p className="expense">${reportData.totalExpense.toLocaleString()}</p></div>
-                <div className="card"><h4>Balance Neto</h4><p className={reportData.netBalance >= 0 ? 'income' : 'expense'}>${reportData.netBalance.toLocaleString()}</p></div>
-            </div>
-
-            {transactions.length === 0 ? (
-                <div className="no-data-message">No hay transacciones en el período seleccionado.</div>
-            ) : (
-                <>
-                    <div className="chart-container">
-                        <h3>Tendencia de Ingresos vs. Gastos (Mensual)</h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={reportData.trendChartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="month" />
-                                <YAxis />
-                                <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
-                                <Legend />
-                                <Bar dataKey="income" fill="#28a745" name="Ingresos" />
-                                <Bar dataKey="expense" fill="#dc3545" name="Gastos" />
-                            </BarChart>
-                        </ResponsiveContainer>
+            <PDFDownloadLink
+              document={
+                <AccountReportPDF
+                  accountName={'Nombre de la cuenta'}
+                  dateRange={dateRange}
+                  reportData={{ ...reportData, categoryMap }}
+                  transactions={transactions}
+                />
+              }
+              fileName={`Reporte_${dateRange.start}_a_${dateRange.end}.pdf`}
+              style={{ marginBottom: '16px', display: 'inline-block', padding: '8px 16px', background: '#007bff', color: '#fff', borderRadius: 4, textDecoration: 'none' }}
+            >
+              {({ loading }) => loading ? 'Generando PDF...' : '📄 Descargar PDF bonito'}
+            </PDFDownloadLink>
+            <div id="report-content">
+                <div className="date-filter-container">
+                    <div className="form-group">
+                        <label htmlFor="start">Desde:</label>
+                        <input type="date" id="start" name="start" value={dateRange.start} onChange={handleDateChange} />
                     </div>
+                    <div className="form-group">
+                        <label htmlFor="end">Hasta:</label>
+                        <input type="date" id="end" name="end" value={dateRange.end} onChange={handleDateChange} />
+                    </div>
+                </div>
 
-                    <div className="pie-charts-container">
+                <div className="summary-cards">
+                    <div className="card"><h4 >Ingresos Totales</h4><p className="income">${reportData.totalIncome.toLocaleString()}</p></div>
+                    <div className="card"><h4>Gastos Totales</h4><p className="expense">${reportData.totalExpense.toLocaleString()}</p></div>
+                    <div className="card"><h4>Balance Neto</h4><p className={reportData.netBalance >= 0 ? 'income' : 'expense'}>${reportData.netBalance.toLocaleString()}</p></div>
+                </div>
+
+                {transactions.length === 0 ? (
+                    <div className="no-data-message">No hay transacciones en el período seleccionado.</div>
+                ) : (
+                    <>
                         <div className="chart-container">
-                            <h3>Distribución de Gastos</h3>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <PieChart>
-                                    <Pie activeIndex={activeExpenseIndex} activeShape={renderActiveShape} data={reportData.expenseChartData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} dataKey="value" onMouseEnter={(_, index) => setActiveExpenseIndex(index)}>
-                                        {reportData.expenseChartData.map((entry) => <Cell key={`cell-${entry.name}`} fill={entry.color} />)}
-                                    </Pie>
-                                </PieChart>
+                            <h3>Tendencia de Ingresos vs. Gastos (Mensual)</h3>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={reportData.trendChartData}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis dataKey="month" />
+                                    <YAxis />
+                                    <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                                    <Legend />
+                                    <Bar dataKey="income" fill="#28a745" name="Ingresos" />
+                                    <Bar dataKey="expense" fill="#dc3545" name="Gastos" />
+                                </BarChart>
                             </ResponsiveContainer>
                         </div>
-                        <div className="chart-container">
-                            <h3>Distribución de Ingresos</h3>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <PieChart>
-                                    <Pie activeIndex={activeIncomeIndex} activeShape={renderActiveShape} data={reportData.incomeChartData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} dataKey="value" onMouseEnter={(_, index) => setActiveIncomeIndex(index)}>
-                                        {reportData.incomeChartData.map((entry) => <Cell key={`cell-${entry.name}`} fill={entry.color} />)}
-                                    </Pie>
-                                </PieChart>
-                            </ResponsiveContainer>
+
+                        <div className="pie-charts-container">
+                            <div className="chart-container">
+                                <h3>Distribución de Gastos</h3>
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <PieChart>
+                                        <Pie activeIndex={activeExpenseIndex} activeShape={renderActiveShape} data={reportData.expenseChartData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} dataKey="value" onMouseEnter={(_, index) => setActiveExpenseIndex(index)}>
+                                            {reportData.expenseChartData.map((entry) => <Cell key={`cell-${entry.name}`} fill={entry.color} />)}
+                                        </Pie>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="chart-container">
+                                <h3>Distribución de Ingresos</h3>
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <PieChart>
+                                        <Pie activeIndex={activeIncomeIndex} activeShape={renderActiveShape} data={reportData.incomeChartData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} dataKey="value" onMouseEnter={(_, index) => setActiveIncomeIndex(index)}>
+                                            {reportData.incomeChartData.map((entry) => <Cell key={`cell-${entry.name}`} fill={entry.color} />)}
+                                        </Pie>
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
                         </div>
-                    </div>
-                </>
-            )}
+                    </>
+                )}
+            </div>
         </div>
     );
 }
