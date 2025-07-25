@@ -2,15 +2,27 @@
 .incomes-page {
   max-width: 900px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 2rem;
   box-sizing: border-box;
+  background-color: #121212; /* Fondo oscuro principal */
+  color: #e0e0e0;
+  min-height: 100vh;
 }
 
 /* Título */
 .incomes-title {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  text-align: left;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  color: #ffffff;
+}
+
+/* Subtítulo */
+.incomes-subtitle {
+  font-size: 1.2rem;
+  color: #a0a0a0;
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
 /* Formularios */
@@ -21,7 +33,44 @@
   flex-wrap: wrap;
 }
 
-.incomes-form input,
+.incomes-form-container {
+  background-color: #1e1e1e; /* Fondo de tarjeta */
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 3rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.incomes-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.incomes-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #b3b3b3;
+}
+
+.incomes-form input[type="number"],
+.incomes-form input[type="date"],
+.incomes-form input[type="text"] {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.incomes-form input:focus {
+  outline: none;
+  border-color: #1db954; /* Verde Spotify como acento */
+  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.3);
+}
+
 .incomes-form select {
   flex: 1 1 200px;
   padding: 0.5rem;
@@ -34,18 +83,24 @@
 }
 
 .incomes-form button {
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffffff;
+  background-color: #1db954;
   border: none;
-  border-radius: 4px;
-  background: #0066ff;
-  color: white;
+  border-radius: 8px;
   cursor: pointer;
-  flex: 0 0 auto;
+  transition: background-color 0.2s;
+}
+
+.incomes-form button:hover:not(:disabled) {
+  background-color: #1ed760;
 }
 
 .incomes-form button:disabled {
-  opacity: 0.6;
+  background-color: #535353;
   cursor: not-allowed;
 }
 
@@ -59,6 +114,12 @@
 .incomes-list {
   display: grid;
   gap: 0.5rem;
+}
+
+.incomes-list h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #ffffff;
 }
 
 /* Cada item */
@@ -92,6 +153,43 @@
   text-align: center;
   color: #888;
   padding: 1rem;
+}
+
+/* Transacciones estilo tarjeta */
+.transactions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.transaction-card {
+  background-color: #1e1e1e;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-left: 5px solid #28a745; /* Acento de ingreso */
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.transaction-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.transaction-info h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  color: #ffffff;
+}
+
+.transaction-info p {
+  margin: 0.25rem 0;
+  color: #a0a0a0;
+}
+
+.transaction-description {
+  font-style: italic;
+  color: #888;
+  margin-top: 1rem !important;
 }
 
 /* Responsive: en pantallas muy pequeñas apila inputs uno encima de otro */

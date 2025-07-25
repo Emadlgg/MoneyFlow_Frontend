@@ -2,36 +2,53 @@
 .expenses-page {
   max-width: 900px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 2rem;
   box-sizing: border-box;
+  background-color: #121212; /* Fondo oscuro principal */
+  color: #e0e0e0;
+  min-height: 100vh;
 }
 
 /* Título */
 .expenses-title {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  text-align: left;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  color: #ffffff;
+}
+
+/* Subtítulo */
+.expenses-subtitle {
+  font-size: 1.2rem;
+  color: #a0a0a0;
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
 /* Formularios */
 .expenses-form {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 3rem;
   flex-wrap: wrap;
+  background-color: #1e1e1e; /* Fondo de tarjeta */
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .expenses-form--category input,
 .expenses-form--entry select,
 .expenses-form--entry input {
   flex: 1 1 180px;
-  padding: 0.5rem;
+  padding: 0.75rem 1rem;
   font-size: 1rem;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background: #1a1a1a;
-  color: #eee;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #2a2a2a;
+  color: #e0e0e0;
   box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .expenses-form--entry input.entry-amount {
@@ -40,17 +57,23 @@
 
 .expenses-form button {
   flex: 0 0 auto;
-  padding: 0.5rem 1rem;
-  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 1.1rem;
+  font-weight: bold;
   border: none;
-  border-radius: 4px;
-  background: #d64545;
+  border-radius: 8px;
+  background: #e53e3e;
   color: white;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.expenses-form button:hover:not(:disabled) {
+  background-color: #fc8181;
 }
 
 .expenses-form button:disabled {
-  opacity: 0.6;
+  background-color: #535353;
   cursor: not-allowed;
 }
 
@@ -69,7 +92,7 @@
 /* Lista de gastos */
 .expenses-list {
   display: grid;
-  gap: 0.5rem;
+  gap: 1.5rem;
 }
 
 /* Cada item */
@@ -105,6 +128,53 @@
   cursor: pointer;
   margin-left: 0.5rem;
   font-size: 1.1rem;
+}
+
+/* Encabezado de la lista de gastos */
+.expenses-list h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #ffffff;
+}
+
+/* Estilo para la cuadrícula de transacciones */
+.transactions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Tarjeta de transacción */
+.transaction-card {
+  background-color: #1e1e1e;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border-left: 5px solid #e53e3e; /* Acento de gasto */
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.transaction-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Información de la transacción */
+.transaction-info h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.75rem;
+  color: #ffffff;
+}
+
+.transaction-info p {
+  margin: 0.25rem 0;
+  color: #a0a0a0;
+}
+
+/* Descripción de la transacción */
+.transaction-description {
+  font-style: italic;
+  color: #888;
+  margin-top: 1rem !important;
 }
 
 /* Responsive */
