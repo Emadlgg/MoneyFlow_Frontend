@@ -171,8 +171,8 @@ export default function ExpensesPage() {
       </div>
 
       <div className="expenses-form-container">
-        <form onSubmit={handleSubmit} className="expenses-form">
-          <div className="form-group">
+        <form className="expenses-form" onSubmit={handleSubmit}>
+          <div className="form-group amount-group">
             <label>Monto</label>
             <input
               type="number"
@@ -185,13 +185,7 @@ export default function ExpensesPage() {
             />
           </div>
 
-          <CategoryManager
-            type="expense"
-            selectedCategoryId={formData.category_id} // Changed from selectedCategory
-            onCategorySelect={(id) => setFormData(prev => ({ ...prev, category_id: id }))} // Changed from onCategorySelect
-          />
-
-          <div className="form-group">
+          <div className="form-group date-group">
             <label>Fecha</label>
             <input
               type="date"
@@ -202,19 +196,29 @@ export default function ExpensesPage() {
             />
           </div>
 
-          <div className="form-group">
+          <div className="category-group">
+            <label>Categoría</label>
+            <CategoryManager
+              type="expense"
+              selectedCategoryId={formData.category_id}
+              onCategorySelect={(id) => setFormData(prev => ({ ...prev, category_id: id }))}
+              onCategoriesUpdate={fetchExpenses}
+            />
+          </div>
+
+          <div className="form-group description-group">
             <label>Descripción (Opcional)</label>
             <input
               type="text"
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Ej: Compra en el supermercado"
+              placeholder="Ej: Supermercado"
               disabled={isSubmitting}
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="submit-button"
             disabled={isSubmitting || !formData.category_id}
           >
