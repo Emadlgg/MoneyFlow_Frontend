@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../contexts/AuthContext';
 import { useSelectedAccount } from '../contexts/SelectedAccountContext';
-import { ResponsiveContainer, PieChart, Pie, Cell, Sector, Tooltip } from 'recharts';
-import './reports.css'; // Changed from Reports.css to match the filename
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Sector } from 'recharts';
+import './reports.css';
 
+// --- Interfaces ---
 interface Transaction {
     amount: number;
     category_id: number;
@@ -14,11 +15,12 @@ interface Transaction {
 
 interface Category {
     id: number;
-    name: string;
+    name:string;
     color: string;
     type: 'income' | 'expense';
 }
 
+// --- Componente para el gráfico de pastel activo ---
 const renderActiveShape = (props: any) => {
     const RADIAN = Math.PI / 180;
     const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
@@ -34,27 +36,11 @@ const renderActiveShape = (props: any) => {
 
     return (
         <g>
-            <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill}>
+            <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} fontSize={14}>
                 {payload.name}
             </text>
-            <Sector
-                cx={cx}
-                cy={cy}
-                innerRadius={innerRadius}
-                outerRadius={outerRadius}
-                startAngle={startAngle}
-                endAngle={endAngle}
-                fill={fill}
-            />
-            <Sector
-                cx={cx}
-                cy={cy}
-                startAngle={startAngle}
-                endAngle={endAngle}
-                innerRadius={outerRadius + 6}
-                outerRadius={outerRadius + 10}
-                fill={fill}
-            />
+            <Sector cx={cx} cy={cy} innerRadius={innerRadius} outerRadius={outerRadius} startAngle={startAngle} endAngle={endAngle} fill={fill} />
+            <Sector cx={cx} cy={cy} startAngle={startAngle} endAngle={endAngle} innerRadius={outerRadius + 6} outerRadius={outerRadius + 10} fill={fill} />
             <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
             <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
             <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333">{`$${value.toLocaleString()}`}</text>
@@ -65,15 +51,23 @@ const renderActiveShape = (props: any) => {
     );
 };
 
-
+// --- Componente Principal de Reportes ---
 export default function ReportsPage() {
     const { user } = useAuth();
     const { selectedAccountId } = useSelectedAccount();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
-    const [activePieIndex, setActivePieIndex] = useState(0);
+    const [activeExpenseIndex, setActiveExpenseIndex] = useState(0);
+    const [activeIncomeIndex, setActiveIncomeIndex] = useState(0);
+    
+    // Estado para el rango de fechas
+    const [dateRange, setDateRange] = useState({
+        start: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], // Inicio del año actual
+        end: new Date().toISOString().split('T')[0], // Hoy
+    });
 
+    // --- Fetching de Datos ---
     useEffect(() => {
         const fetchData = async () => {
             if (!user || !selectedAccountId) {
@@ -87,7 +81,9 @@ export default function ReportsPage() {
                         .from('transactions')
                         .select('amount, category_id, type, date')
                         .eq('user_id', user.id)
-                        .eq('account_id', selectedAccountId),
+                        .eq('account_id', selectedAccountId)
+                        .gte('date', dateRange.start)
+                        .lte('date', dateRange.end),
                     supabase
                         .from('categories')
                         .select('id, name, color, type')
@@ -101,121 +97,120 @@ export default function ReportsPage() {
                 setCategories(categoriesRes.data || []);
             } catch (error) {
                 console.error("Error fetching report data:", error);
-                setTransactions([]);
-                setCategories([]);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchData();
-    }, [user, selectedAccountId]);
+    }, [user, selectedAccountId, dateRange]);
 
-    const categoryMap = useMemo(() => {
-        return categories.reduce((acc, category) => {
-            acc[category.id] = category;
-            return acc;
-        }, {} as Record<number, Category>);
-    }, [categories]);
+    // --- Procesamiento de Datos ---
+    const categoryMap = useMemo(() => categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat }), {} as Record<number, Category>), [categories]);
 
     const reportData = useMemo(() => {
-        const incomeByCat = new Map<number, number>();
+        const monthlyData = new Map<string, { income: number, expense: number }>();
         const expenseByCat = new Map<number, number>();
+        const incomeByCat = new Map<number, number>();
         let totalIncome = 0;
         let totalExpense = 0;
 
         for (const t of transactions) {
+            const month = t.date.substring(0, 7); // YYYY-MM
+            if (!monthlyData.has(month)) monthlyData.set(month, { income: 0, expense: 0 });
+
             if (t.type === 'income') {
                 totalIncome += t.amount;
                 incomeByCat.set(t.category_id, (incomeByCat.get(t.category_id) || 0) + t.amount);
-            } else { // expense
+                monthlyData.get(month)!.income += t.amount;
+            } else {
                 const positiveAmount = Math.abs(t.amount);
                 totalExpense += positiveAmount;
                 expenseByCat.set(t.category_id, (expenseByCat.get(t.category_id) || 0) + positiveAmount);
+                monthlyData.get(month)!.expense += positiveAmount;
             }
         }
 
-        const expenseChartData = Array.from(expenseByCat.entries()).map(([id, amount]) => ({
-            name: categoryMap[id]?.name || 'Uncategorized',
-            value: amount,
-            color: categoryMap[id]?.color || '#8884d8'
-        }));
+        const expenseChartData = Array.from(expenseByCat.entries()).map(([id, amount]) => ({ name: categoryMap[id]?.name || 'Sin Categoría', value: amount, color: categoryMap[id]?.color || '#8884d8' }));
+        const incomeChartData = Array.from(incomeByCat.entries()).map(([id, amount]) => ({ name: categoryMap[id]?.name || 'Sin Categoría', value: amount, color: categoryMap[id]?.color || '#82ca9d' }));
+        const trendChartData = Array.from(monthlyData.entries()).sort().map(([month, data]) => ({ month, ...data }));
 
-        return { totalIncome, totalExpense, netBalance: totalIncome - totalExpense, expenseChartData };
+        return { totalIncome, totalExpense, netBalance: totalIncome - totalExpense, expenseChartData, incomeChartData, trendChartData };
     }, [transactions, categoryMap]);
-    
-    const onPieEnter = (_: any, index: number) => {
-        setActivePieIndex(index);
+
+    // --- Handlers ---
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
-    if (loading) {
-        return <div className="reports-page"><p>Loading reports...</p></div>;
-    }
-
-    if (!selectedAccountId) {
-        return (
-            <div className="reports-page">
-                <div className="no-account-selected">
-                    <h2>No Account Selected</h2>
-                    <p>Please select an account from the sidebar to view reports.</p>
-                </div>
-            </div>
-        );
-    }
-    
-    if (transactions.length === 0) {
-        return (
-             <div className="reports-page">
-                <h2>Reports</h2>
-                <p>No transaction data available for this account to generate reports.</p>
-            </div>
-        )
-    }
+    // --- Renderizado ---
+    if (loading) return <div className="reports-page"><p>Cargando reportes...</p></div>;
+    if (!selectedAccountId) return <div className="reports-page"><div className="no-account-selected"><h2>Selecciona una cuenta para ver los reportes.</h2></div></div>;
 
     return (
         <div className="reports-page">
-            <h2>Reports</h2>
-            <div className="summary-cards">
-                <div className="card">
-                    <h4>Total Income</h4>
-                    <p className="income">${reportData.totalIncome.toLocaleString()}</p>
+            <h2 className="reports-title">Reportes</h2>
+
+            <div className="date-filter-container">
+                <div className="form-group">
+                    <label htmlFor="start">Desde:</label>
+                    <input type="date" id="start" name="start" value={dateRange.start} onChange={handleDateChange} />
                 </div>
-                <div className="card">
-                    <h4>Total Expense</h4>
-                    <p className="expense">${reportData.totalExpense.toLocaleString()}</p>
-                </div>
-                <div className="card">
-                    <h4>Net Balance</h4>
-                    <p className={reportData.netBalance >= 0 ? 'income' : 'expense'}>
-                        ${reportData.netBalance.toLocaleString()}
-                    </p>
+                <div className="form-group">
+                    <label htmlFor="end">Hasta:</label>
+                    <input type="date" id="end" name="end" value={dateRange.end} onChange={handleDateChange} />
                 </div>
             </div>
 
-            <div className="chart-container">
-                <h3>Expense Distribution</h3>
-                <ResponsiveContainer width="100%" height={400}>
-                    <PieChart>
-                        <Pie
-                            activeIndex={activePieIndex}
-                            activeShape={renderActiveShape}
-                            data={reportData.expenseChartData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={80}
-                            outerRadius={120}
-                            fill="#8884d8"
-                            dataKey="value"
-                            onMouseEnter={onPieEnter}
-                        >
-                            {reportData.expenseChartData.map((entry) => (
-                                <Cell key={`cell-${entry.name}`} fill={entry.color} />
-                            ))}
-                        </Pie>
-                        <Tooltip />
-                    </PieChart>
-                </ResponsiveContainer>
+            <div className="summary-cards">
+                <div className="card"><h4 >Ingresos Totales</h4><p className="income">${reportData.totalIncome.toLocaleString()}</p></div>
+                <div className="card"><h4>Gastos Totales</h4><p className="expense">${reportData.totalExpense.toLocaleString()}</p></div>
+                <div className="card"><h4>Balance Neto</h4><p className={reportData.netBalance >= 0 ? 'income' : 'expense'}>${reportData.netBalance.toLocaleString()}</p></div>
             </div>
+
+            {transactions.length === 0 ? (
+                <div className="no-data-message">No hay transacciones en el período seleccionado.</div>
+            ) : (
+                <>
+                    <div className="chart-container">
+                        <h3>Tendencia de Ingresos vs. Gastos (Mensual)</h3>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={reportData.trendChartData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="month" />
+                                <YAxis />
+                                <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                                <Legend />
+                                <Bar dataKey="income" fill="#28a745" name="Ingresos" />
+                                <Bar dataKey="expense" fill="#dc3545" name="Gastos" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    <div className="pie-charts-container">
+                        <div className="chart-container">
+                            <h3>Distribución de Gastos</h3>
+                            <ResponsiveContainer width="100%" height={400}>
+                                <PieChart>
+                                    <Pie activeIndex={activeExpenseIndex} activeShape={renderActiveShape} data={reportData.expenseChartData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} dataKey="value" onMouseEnter={(_, index) => setActiveExpenseIndex(index)}>
+                                        {reportData.expenseChartData.map((entry) => <Cell key={`cell-${entry.name}`} fill={entry.color} />)}
+                                    </Pie>
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="chart-container">
+                            <h3>Distribución de Ingresos</h3>
+                            <ResponsiveContainer width="100%" height={400}>
+                                <PieChart>
+                                    <Pie activeIndex={activeIncomeIndex} activeShape={renderActiveShape} data={reportData.incomeChartData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} dataKey="value" onMouseEnter={(_, index) => setActiveIncomeIndex(index)}>
+                                        {reportData.incomeChartData.map((entry) => <Cell key={`cell-${entry.name}`} fill={entry.color} />)}
+                                    </Pie>
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
