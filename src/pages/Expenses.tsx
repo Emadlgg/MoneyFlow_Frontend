@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { useSelectedAccount } from '../contexts/SelectedAccountContext'
@@ -9,9 +9,16 @@ import './expenses.css'
 interface Transaction {
   id: string
   amount: number
-  category: string
+  category_id: number
   date: string
   account_id: string
+  description?: string
+}
+
+interface Category {
+  id: number;
+  name: string;
+  color: string;
 }
 
 export default function ExpensesPage() {
@@ -19,56 +26,78 @@ export default function ExpensesPage() {
   const { selectedAccountId } = useSelectedAccount()
   const { accounts, refetch: refetchAccounts } = useAccount()
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [categories, setCategories] = useState<Category[]>([]) // Add state for categories
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     amount: '',
-    category: '',
-    date: new Date().toISOString().split('T')[0]
+    category_id: '', // Changed from category: ''
+    date: new Date().toISOString().split('T')[0],
+    description: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const selectedAccount = accounts.find(acc => acc.id === selectedAccountId)
 
-  const fetchExpenses = async () => {
+  // Create a map for easy category lookup
+  const categoryMap = useMemo(() => {
+    return categories.reduce((acc, category) => {
+      acc[category.id] = category;
+      return acc;
+    }, {} as Record<number, Category>);
+  }, [categories]);
+
+  const fetchExpenses = useCallback(async () => {
     if (!user || !selectedAccountId) {
       setTransactions([])
+      setCategories([])
       setLoading(false)
       return
     }
 
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('account_id', selectedAccountId)
-        .lt('amount', 0) // Solo gastos (montos negativos)
-        .order('date', { ascending: false })
+      // Fetch both transactions and categories
+      const [transactionsRes, categoriesRes] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('account_id', selectedAccountId)
+          .lt('amount', 0), // Expenses
+        supabase
+          .from('categories')
+          .select('id, name, color')
+          .eq('user_id', user.id)
+          .eq('type', 'expense')
+      ]);
 
-      if (error) throw error
-      setTransactions(data || [])
+      if (transactionsRes.error) throw transactionsRes.error
+      if (categoriesRes.error) throw categoriesRes.error
+
+      setTransactions(transactionsRes.data || [])
+      setCategories(categoriesRes.data || [])
     } catch (error) {
       console.error('Error fetching expenses:', error)
       setTransactions([])
+      setCategories([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, selectedAccountId])
 
   useEffect(() => {
     fetchExpenses()
-  }, [user, selectedAccountId])
+  }, [fetchExpenses])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!selectedAccountId) {
+    if (!selectedAccountId || !user) {
       alert('Selecciona una cuenta primero')
       return
     }
 
-    if (!formData.amount || !formData.category || !formData.date) {
+    if (!formData.amount || !formData.category_id || !formData.date) {
       alert('Completa todos los campos')
       return
     }
@@ -78,17 +107,20 @@ export default function ExpensesPage() {
       const amount = parseFloat(formData.amount)
       if (amount <= 0) {
         alert('El monto debe ser mayor a 0')
+        setIsSubmitting(false)
         return
       }
 
       const { data, error } = await supabase
         .from('transactions')
         .insert([{
-          user_id: user?.id,
+          user_id: user.id,
           account_id: parseInt(selectedAccountId),
           amount: -amount, // Negativo para gastos
-          category: formData.category,
-          date: new Date(formData.date).toISOString()
+          category_id: parseInt(formData.category_id), // Changed from category
+          type: 'expense',
+          date: new Date(formData.date).toISOString(),
+          description: formData.description
         }])
         .select()
         .single()
@@ -99,13 +131,14 @@ export default function ExpensesPage() {
       }
 
       // Actualizar la lista local
-      setTransactions(prev => [data, ...prev])
+      setTransactions(prev => [data, ...prev]);
       
       // Limpiar formulario
       setFormData({
         amount: '',
-        category: '',
-        date: new Date().toISOString().split('T')[0]
+        category_id: '', // Changed from category
+        date: new Date().toISOString().split('T')[0],
+        description: ''
       })
 
       // Refrescar el saldo de la cuenta
@@ -154,8 +187,8 @@ export default function ExpensesPage() {
 
           <CategoryManager
             type="expense"
-            selectedCategory={formData.category}
-            onCategorySelect={(category) => setFormData(prev => ({ ...prev, category }))}
+            selectedCategoryId={formData.category_id} // Changed from selectedCategory
+            onCategorySelect={(id) => setFormData(prev => ({ ...prev, category_id: id }))} // Changed from onCategorySelect
           />
 
           <div className="form-group">
@@ -169,10 +202,21 @@ export default function ExpensesPage() {
             />
           </div>
 
+          <div className="form-group">
+            <label>Descripción (Opcional)</label>
+            <input
+              type="text"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Ej: Compra en el supermercado"
+              disabled={isSubmitting}
+            />
+          </div>
+
           <button 
             type="submit" 
             className="submit-button"
-            disabled={isSubmitting || !formData.category}
+            disabled={isSubmitting || !formData.category_id}
           >
             {isSubmitting ? 'Agregando...' : 'Agregar Gasto'}
           </button>
@@ -187,15 +231,21 @@ export default function ExpensesPage() {
           <p>No hay gastos registrados para esta cuenta.</p>
         ) : (
           <div className="transactions-grid">
-            {transactions.map(transaction => (
-              <div key={transaction.id} className="transaction-card">
-                <div className="transaction-info">
-                  <h3>${Math.abs(transaction.amount).toLocaleString()}</h3>
-                  <p>{transaction.category}</p>
-                  <p>{new Date(transaction.date).toLocaleDateString()}</p>
+            {transactions.map(transaction => {
+              const category = categoryMap[transaction.category_id];
+              return (
+                <div key={transaction.id} className="transaction-card">
+                  <div className="transaction-info">
+                    <h3>${Math.abs(transaction.amount).toLocaleString()}</h3>
+                    <p style={{ color: category?.color || '#ccc' }}>
+                      {category?.name || 'Sin categoría'}
+                    </p>
+                    <p>{new Date(transaction.date).toLocaleDateString()}</p>
+                    {transaction.description && <p className="transaction-description">{transaction.description}</p>}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

@@ -58,26 +58,24 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
     fetchAccounts()
   }, [fetchAccounts])
 
-  const createAccount = async (name: string, type: string, balance: number) => {
-    if (!user) throw new Error("Usuario no autenticado.");
+  const createAccount = async (name: string, type: string, initialBalance: number) => {
+    if (!user) throw new Error("User not authenticated");
 
-    const { data: newAccount, error: accountError } = await supabase
-      .from('accounts')
-      .insert({ user_id: user.id, name, type, balance })
-      .select()
-      .single();
+    // The RPC call is now simpler
+    const { data, error } = await supabase.rpc('create_account_with_initial_transaction', {
+      p_user_id: user.id,
+      p_account_name: name,
+      p_account_type: type,
+      p_initial_balance: initialBalance
+    });
 
-    if (accountError) throw accountError;
-
-    if (balance > 0) {
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({ user_id: user.id, account_id: newAccount.id, amount: balance, category: 'Saldo Inicial', date: new Date().toISOString() });
-      
-      if (transactionError) throw transactionError;
+    if (error) {
+      console.error("Error creating account:", error);
+      throw error;
     }
     
-    await fetchAccounts(); // Refresca la lista
+    await fetchAccounts(); // Changed from refetch()
+    return data;
   };
 
   const deleteAccount = async (accountId: string) => {

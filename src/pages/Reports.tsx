@@ -1,371 +1,221 @@
-import React, { useState, useEffect } from 'react'
-import { supabase } from '../services/supabaseClient'
-import { useAuth } from '../contexts/AuthContext'
-import { useSelectedAccount } from '../contexts/SelectedAccountContext'
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
-  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line
-} from 'recharts'
+import { useState, useEffect, useMemo } from 'react';
+import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../contexts/AuthContext';
+import { useSelectedAccount } from '../contexts/SelectedAccountContext';
+import { ResponsiveContainer, PieChart, Pie, Cell, Sector, Tooltip } from 'recharts';
+import './reports.css'; // Changed from Reports.css to match the filename
 
-// Interfaz actualizada: quitamos 'type' y 'description' que no usamos aquí
 interface Transaction {
-  id: string
-  amount: number
-  category: string
-  date: string
-  account_id: string
+    amount: number;
+    category_id: number;
+    type: 'income' | 'expense';
+    date: string;
 }
 
-interface MonthlyData {
-  month: string
-  income: number
-  expense: number
-  balance: number
+interface Category {
+    id: number;
+    name: string;
+    color: string;
+    type: 'income' | 'expense';
 }
 
-interface CategoryData {
-  name: string
-  value: number
-  color: string
-}
+const renderActiveShape = (props: any) => {
+    const RADIAN = Math.PI / 180;
+    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 10) * cos;
+    const sy = cy + (outerRadius + 10) * sin;
+    const mx = cx + (outerRadius + 30) * cos;
+    const my = cy + (outerRadius + 30) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
 
-// Función helper para formatear fechas sin date-fns
-const formatDate = (dateStr: string, format: string) => {
-  const date = new Date(dateStr)
-  
-  if (format === 'yyyy-MM-dd') {
-    return date.toISOString().split('T')[0]
-  }
-  
-  if (format === 'MMM yyyy') {
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
-                   'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-    return `${months[date.getMonth()]} ${date.getFullYear()}`
-  }
-  
-  if (format === 'yyyy-MM') {
-    const year = date.getFullYear()
-    const month = (date.getMonth() + 1).toString().padStart(2, '0')
-    return `${year}-${month}`
-  }
-  
-  return date.toLocaleDateString()
-}
+    return (
+        <g>
+            <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill}>
+                {payload.name}
+            </text>
+            <Sector
+                cx={cx}
+                cy={cy}
+                innerRadius={innerRadius}
+                outerRadius={outerRadius}
+                startAngle={startAngle}
+                endAngle={endAngle}
+                fill={fill}
+            />
+            <Sector
+                cx={cx}
+                cy={cy}
+                startAngle={startAngle}
+                endAngle={endAngle}
+                innerRadius={outerRadius + 6}
+                outerRadius={outerRadius + 10}
+                fill={fill}
+            />
+            <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
+            <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
+            <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333">{`$${value.toLocaleString()}`}</text>
+            <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="#999">
+                {`(${(percent * 100).toFixed(2)}%)`}
+            </text>
+        </g>
+    );
+};
 
-// Función para restar meses
-const subtractMonths = (date: Date, months: number) => {
-  const result = new Date(date)
-  result.setMonth(result.getMonth() - months)
-  return result
-}
 
 export default function ReportsPage() {
-  const { user } = useAuth()
-  const { selectedAccountId } = useSelectedAccount()
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loading, setLoading] = useState(true)
-  const [dateRange, setDateRange] = useState({
-    start: formatDate(subtractMonths(new Date(), 5).toISOString(), 'yyyy-MM-dd'),
-    end: formatDate(new Date().toISOString(), 'yyyy-MM-dd')
-  })
+    const { user } = useAuth();
+    const { selectedAccountId } = useSelectedAccount();
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activePieIndex, setActivePieIndex] = useState(0);
 
-  const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([])
-  const [incomeCategories, setIncomeCategories] = useState<CategoryData[]>([])
-  const [expenseCategories, setExpenseCategories] = useState<CategoryData[]>([])
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!user || !selectedAccountId) {
+                setLoading(false);
+                return;
+            }
+            setLoading(true);
+            try {
+                const [transactionsRes, categoriesRes] = await Promise.all([
+                    supabase
+                        .from('transactions')
+                        .select('amount, category_id, type, date')
+                        .eq('user_id', user.id)
+                        .eq('account_id', selectedAccountId),
+                    supabase
+                        .from('categories')
+                        .select('id, name, color, type')
+                        .eq('user_id', user.id)
+                ]);
 
-  // CORRECCIÓN: La función ahora acepta un saldo inicial para el cálculo acumulativo
-  const processChartData = (transactionsToProcess: Transaction[], startingBalance: number) => {
-    const monthlyMap = new Map<string, { income: number; expense: number }>()
-    const incomeMap = new Map<string, number>()
-    const expenseMap = new Map<string, number>()
+                if (transactionsRes.error) throw transactionsRes.error;
+                if (categoriesRes.error) throw categoriesRes.error;
 
-    transactionsToProcess.forEach(transaction => {
-      const monthKey = formatDate(transaction.date, 'yyyy-MM')
-      if (!monthlyMap.has(monthKey)) {
-        monthlyMap.set(monthKey, { income: 0, expense: 0 })
-      }
-      const monthlyEntry = monthlyMap.get(monthKey)!
+                setTransactions(transactionsRes.data || []);
+                setCategories(categoriesRes.data || []);
+            } catch (error) {
+                console.error("Error fetching report data:", error);
+                setTransactions([]);
+                setCategories([]);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-      if (transaction.amount > 0) {
-        monthlyEntry.income += transaction.amount
-        incomeMap.set(transaction.category, (incomeMap.get(transaction.category) || 0) + transaction.amount)
-      } else {
-        const expenseValue = Math.abs(transaction.amount)
-        monthlyEntry.expense += expenseValue
-        expenseMap.set(transaction.category, (expenseMap.get(transaction.category) || 0) + expenseValue)
-      }
-    })
+        fetchData();
+    }, [user, selectedAccountId]);
 
-    let runningBalance = startingBalance; // Empezamos con el saldo anterior al rango
-    const monthlyArray: MonthlyData[] = Array.from(monthlyMap.entries())
-      .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
-      .map(([monthKey, data]) => {
-        // CORRECCIÓN: El balance ahora es acumulativo
-        runningBalance += data.income - data.expense;
-        const date = new Date(monthKey + '-02T12:00:00Z')
-        return {
-          month: formatDate(date.toISOString(), 'MMM yyyy'),
-          income: data.income,
-          expense: data.expense,
-          balance: runningBalance // Usamos el saldo acumulado
+    const categoryMap = useMemo(() => {
+        return categories.reduce((acc, category) => {
+            acc[category.id] = category;
+            return acc;
+        }, {} as Record<number, Category>);
+    }, [categories]);
+
+    const reportData = useMemo(() => {
+        const incomeByCat = new Map<number, number>();
+        const expenseByCat = new Map<number, number>();
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        for (const t of transactions) {
+            if (t.type === 'income') {
+                totalIncome += t.amount;
+                incomeByCat.set(t.category_id, (incomeByCat.get(t.category_id) || 0) + t.amount);
+            } else { // expense
+                const positiveAmount = Math.abs(t.amount);
+                totalExpense += positiveAmount;
+                expenseByCat.set(t.category_id, (expenseByCat.get(t.category_id) || 0) + positiveAmount);
+            }
         }
-      })
+
+        const expenseChartData = Array.from(expenseByCat.entries()).map(([id, amount]) => ({
+            name: categoryMap[id]?.name || 'Uncategorized',
+            value: amount,
+            color: categoryMap[id]?.color || '#8884d8'
+        }));
+
+        return { totalIncome, totalExpense, netBalance: totalIncome - totalExpense, expenseChartData };
+    }, [transactions, categoryMap]);
     
-    setMonthlyData(monthlyArray)
+    const onPieEnter = (_: any, index: number) => {
+        setActivePieIndex(index);
+    };
 
-    const colors = ['#28a745', '#007bff', '#ffc107', '#6f42c1', '#fd7e14']
-    const expenseColors = ['#dc3545', '#e83e8c', '#6c757d', '#20c997', '#17a2b8']
-    const incomeArray: CategoryData[] = Array.from(incomeMap.entries()).map(([name, value], index) => ({ name, value, color: colors[index % colors.length] }))
-    const expenseArray: CategoryData[] = Array.from(expenseMap.entries()).map(([name, value], index) => ({ name, value, color: expenseColors[index % expenseColors.length] }))
-    setIncomeCategories(incomeArray)
-    setExpenseCategories(expenseArray)
-  }
-
-  useEffect(() => {
-    const fetchAndProcessData = async () => {
-      if (!user || !selectedAccountId) {
-        setTransactions([])
-        processChartData([], 0)
-        return
-      }
-      setLoading(true)
-      try {
-        // 1. Obtener el saldo ANTES del rango de fechas seleccionado
-        const { data: priorTransactions, error: priorError } = await supabase
-          .from('transactions')
-          .select('amount')
-          .eq('account_id', selectedAccountId)
-          .lt('date', dateRange.start)
-
-        if (priorError) throw priorError
-        const startingBalance = priorTransactions.reduce((sum, t) => sum + t.amount, 0)
-
-        // 2. Obtener las transacciones DENTRO del rango de fechas
-        const { data, error } = await supabase
-          .from('transactions')
-          .select('id, amount, category, date, account_id')
-          .eq('account_id', selectedAccountId)
-          .gte('date', dateRange.start)
-          .lte('date', dateRange.end)
-          .order('date', { ascending: true })
-
-        if (error) throw error
-        const fetchedTransactions = data || []
-        setTransactions(fetchedTransactions)
-        
-        // 3. Procesar los datos pasando el saldo inicial
-        processChartData(fetchedTransactions, startingBalance)
-
-      } catch (error) {
-        console.error('Error fetching report data:', error)
-        setTransactions([])
-        processChartData([], 0)
-      } finally {
-        setLoading(false)
-      }
+    if (loading) {
+        return <div className="reports-page"><p>Loading reports...</p></div>;
     }
-    fetchAndProcessData()
-  }, [user, selectedAccountId, dateRange])
 
-  // CORRECCIÓN: Calcular totales basados en el signo del monto
-  const totalIncome = transactions
-    .filter(t => t.amount > 0)
-    .reduce((sum, t) => sum + t.amount, 0)
-
-  const totalExpense = transactions
-    .filter(t => t.amount < 0)
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
-
-  const netBalance = totalIncome - totalExpense
-
-  // Custom tooltip para las gráficas
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="chart-tooltip">
-          <p className="chart-tooltip__label">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="chart-tooltip__value" style={{ color: entry.color }}>
-              {entry.name}: ${entry.value.toLocaleString('es-ES', { 
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2 
-              })}
-            </p>
-          ))}
-        </div>
-      )
+    if (!selectedAccountId) {
+        return (
+            <div className="reports-page">
+                <div className="no-account-selected">
+                    <h2>No Account Selected</h2>
+                    <p>Please select an account from the sidebar to view reports.</p>
+                </div>
+            </div>
+        );
     }
-    return null
-  }
+    
+    if (transactions.length === 0) {
+        return (
+             <div className="reports-page">
+                <h2>Reports</h2>
+                <p>No transaction data available for this account to generate reports.</p>
+            </div>
+        )
+    }
 
-  if (loading) {
     return (
-      <div className="reports-page">
-        <div className="loading-container">
-          <div className="loading-spinner">
-            <div className="spinner"></div>
-            <p>Cargando reportes...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+        <div className="reports-page">
+            <h2>Reports</h2>
+            <div className="summary-cards">
+                <div className="card">
+                    <h4>Total Income</h4>
+                    <p className="income">${reportData.totalIncome.toLocaleString()}</p>
+                </div>
+                <div className="card">
+                    <h4>Total Expense</h4>
+                    <p className="expense">${reportData.totalExpense.toLocaleString()}</p>
+                </div>
+                <div className="card">
+                    <h4>Net Balance</h4>
+                    <p className={reportData.netBalance >= 0 ? 'income' : 'expense'}>
+                        ${reportData.netBalance.toLocaleString()}
+                    </p>
+                </div>
+            </div>
 
-  if (!selectedAccountId) {
-    return (
-      <div className="reports-page">
-        <div className="no-data">
-          <h3>📊 Reportes Financieros</h3>
-          <p>Por favor selecciona una cuenta para ver los reportes.</p>
+            <div className="chart-container">
+                <h3>Expense Distribution</h3>
+                <ResponsiveContainer width="100%" height={400}>
+                    <PieChart>
+                        <Pie
+                            activeIndex={activePieIndex}
+                            activeShape={renderActiveShape}
+                            data={reportData.expenseChartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={80}
+                            outerRadius={120}
+                            fill="#8884d8"
+                            dataKey="value"
+                            onMouseEnter={onPieEnter}
+                        >
+                            {reportData.expenseChartData.map((entry) => (
+                                <Cell key={`cell-${entry.name}`} fill={entry.color} />
+                            ))}
+                        </Pie>
+                        <Tooltip />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="reports-page">
-      <div className="reports-header">
-        <h1 className="reports-title">📊 Reportes Financieros</h1>
-        
-        <div className="reports-controls">
-          <div className="date-range">
-            <label>Desde:</label>
-            <input
-              type="date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-            />
-            <label>Hasta:</label>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Resumen de totales */}
-      <div className="reports-summary">
-        <div className="summary-card summary-card--income">
-          <h3>💰 Total Ingresos</h3>
-          <span className="summary-amount">
-            ${totalIncome.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-        <div className="summary-card summary-card--expense">
-          <h3>💸 Total Gastos</h3>
-          <span className="summary-amount">
-            ${totalExpense.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-        <div className={`summary-card ${netBalance >= 0 ? 'summary-card--positive' : 'summary-card--negative'}`}>
-          <h3>💼 Balance Neto</h3>
-          <span className="summary-amount">
-            ${netBalance.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </span>
-        </div>
-      </div>
-
-      {/* Gráfica de tendencia mensual */}
-      {monthlyData.length > 0 && (
-        <div className="chart-container">
-          <h2 className="chart-title">📈 Tendencia Mensual</h2>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="month" stroke="#ccc" />
-              <YAxis stroke="#ccc" tickFormatter={(value) => `$${value.toLocaleString()}`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar dataKey="income" name="Ingresos" fill="#28a745" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expense" name="Gastos" fill="#dc3545" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* Gráfica de línea de balance */}
-      {monthlyData.length > 0 && (
-        <div className="chart-container">
-          <h2 className="chart-title">📊 Balance Mensual</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-              <XAxis dataKey="month" stroke="#ccc" />
-              <YAxis stroke="#ccc" tickFormatter={(value) => `$${value.toLocaleString()}`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line 
-                type="monotone" 
-                dataKey="balance" 
-                name="Balance" 
-                stroke="#007bff" 
-                strokeWidth={3}
-                dot={{ fill: '#007bff', strokeWidth: 2, r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* Gráficas de torta por categorías */}
-      <div className="charts-row">
-        {/* Categorías de ingresos */}
-        {incomeCategories.length > 0 && (
-          <div className="chart-container chart-container--half">
-            <h2 className="chart-title">💰 Ingresos por Categoría</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={incomeCategories}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {incomeCategories.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Monto']} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Categorías de gastos */}
-        {expenseCategories.length > 0 && (
-          <div className="chart-container chart-container--half">
-            <h2 className="chart-title">💸 Gastos por Categoría</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={expenseCategories}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {expenseCategories.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Monto']} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      {transactions.length === 0 && !loading && (
-        <div className="no-data">
-          <h3>📭 No hay datos para mostrar</h3>
-          <p>No se encontraron transacciones en el rango de fechas seleccionado.</p>
-          <p>Ve a <strong>Ingresos</strong> o <strong>Gastos</strong> para agregar transacciones.</p>
-        </div>
-      )}
-    </div>
-  )
+    );
 }

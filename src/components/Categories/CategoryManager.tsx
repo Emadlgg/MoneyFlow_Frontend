@@ -2,12 +2,18 @@ import React, { useState } from 'react'
 import { useCategory } from '../../contexts/CategoryContext'
 
 interface CategoryManagerProps {
-  type: 'income' | 'expense'
-  selectedCategory: string
-  onCategorySelect: (category: string) => void
+  type: 'income' | 'expense';
+  selectedCategoryId: string; // Changed from selectedCategory
+  onCategorySelect: (id: string) => void;
+  onCategoriesUpdate?: () => void;
 }
 
-export default function CategoryManager({ type, selectedCategory, onCategorySelect }: CategoryManagerProps) {
+export default function CategoryManager({ 
+  type, 
+  selectedCategoryId, // Changed from selectedCategory
+  onCategorySelect,
+  onCategoriesUpdate 
+}: CategoryManagerProps) {
   const { incomeCategories, expenseCategories, createCategory } = useCategory()
   const [isCreating, setIsCreating] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
@@ -26,7 +32,7 @@ export default function CategoryManager({ type, selectedCategory, onCategorySele
   console.log('🎯 CategoryManager render:', { 
     type, 
     categoriesCount: categories.length, 
-    selectedCategory,
+    selectedCategoryId,
     isCreating 
   })
 
@@ -50,6 +56,7 @@ export default function CategoryManager({ type, selectedCategory, onCategorySele
       setNewCategoryName('')
       setNewCategoryColor('#333333')
       setIsCreating(false)
+      if (onCategoriesUpdate) onCategoriesUpdate() // Notify parent component
     } catch (error: any) {
       console.error('🎯 CategoryManager: Error creating category:', error)
       setError(error.message || 'Error al crear la categoría')
@@ -67,40 +74,33 @@ export default function CategoryManager({ type, selectedCategory, onCategorySele
 
   return (
     <div className="category-manager">
-      <div className="category-selector">
+      <div className="form-group">
         <label>Categoría</label>
-        <div className="category-options">
-          {categories.map(category => (
-            <button
-              key={category.id}
-              type="button"
-              className={`category-option ${selectedCategory === category.name ? 'category-option--selected' : ''} ${category.is_default ? 'category-option--default' : ''}`}
-              style={{ '--category-color': category.color } as React.CSSProperties}
-              onClick={() => {
-                console.log('🎯 Category selected:', category.name)
-                onCategorySelect(category.name)
-              }}
-              title={category.is_default ? 'Categoría por defecto' : 'Categoría personalizada'}
-            >
-              <span className="category-color" style={{ backgroundColor: category.color }}></span>
-              {category.name}
-              {category.is_default && <span className="category-default-badge">★</span>}
-            </button>
-          ))}
-          
-          <button
-            type="button"
-            className="category-option category-option--add"
-            onClick={() => {
-              console.log('🎯 Add category button clicked')
-              setIsCreating(true)
-            }}
-            disabled={isSubmitting}
+        <div className="category-select-wrapper">
+          <select
+            value={selectedCategoryId} // Changed from selectedCategory
+            onChange={(e) => onCategorySelect(e.target.value)}
+            disabled={isCreating || categories.length === 0}
+            required
           >
-            + Nueva categoría
-          </button>
+            <option value="">Seleccione una categoría</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
+
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={() => setIsCreating(true)}
+        disabled={isSubmitting}
+      >
+        + Nueva categoría
+      </button>
 
       {isCreating && (
         <div className="category-creator">

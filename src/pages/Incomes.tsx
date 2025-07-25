@@ -1,5 +1,5 @@
 // src/pages/IncomesPage.tsx
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { useSelectedAccount } from '../contexts/SelectedAccountContext'
@@ -10,9 +10,16 @@ import './incomes.css'
 interface Transaction {
   id: string
   amount: number
-  category: string
+  category_id: number
   date: string
   account_id: string
+  description?: string
+}
+
+interface Category {
+  id: number;
+  name: string;
+  color: string;
 }
 
 export default function IncomesPage() {
@@ -20,56 +27,77 @@ export default function IncomesPage() {
   const { selectedAccountId } = useSelectedAccount()
   const { accounts, refetch: refetchAccounts } = useAccount()
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     amount: '',
-    category: '',
-    date: new Date().toISOString().split('T')[0]
+    category_id: '',
+    date: new Date().toISOString().split('T')[0],
+    description: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const selectedAccount = accounts.find(acc => acc.id === selectedAccountId)
 
-  const fetchIncomes = async () => {
+  const categoryMap = useMemo(() => {
+    return categories.reduce((acc, category) => {
+      acc[category.id] = category;
+      return acc;
+    }, {} as Record<number, Category>);
+  }, [categories]);
+
+  const fetchData = useCallback(async () => {
     if (!user || !selectedAccountId) {
       setTransactions([])
+      setCategories([])
       setLoading(false)
       return
     }
 
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('account_id', selectedAccountId)
-        .gt('amount', 0) // Solo ingresos (montos positivos)
-        .order('date', { ascending: false })
+      const [transactionsRes, categoriesRes] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('account_id', selectedAccountId)
+          .gt('amount', 0) // Incomes
+          .order('date', { ascending: false }),
+        supabase
+          .from('categories')
+          .select('id, name, color')
+          .eq('user_id', user.id)
+          .eq('type', 'income')
+      ])
 
-      if (error) throw error
-      setTransactions(data || [])
+      if (transactionsRes.error) throw transactionsRes.error
+      if (categoriesRes.error) throw categoriesRes.error
+      
+      setTransactions(transactionsRes.data || [])
+      setCategories(categoriesRes.data || [])
     } catch (error) {
-      console.error('Error fetching incomes:', error)
+      console.error('Error fetching income data:', error)
       setTransactions([])
+      setCategories([])
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, selectedAccountId]);
 
   useEffect(() => {
-    fetchIncomes()
-  }, [user, selectedAccountId])
+    fetchData()
+  }, [fetchData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!selectedAccountId) {
+    if (!selectedAccountId || !user) {
       alert('Selecciona una cuenta primero')
       return
     }
 
-    if (!formData.amount || !formData.category || !formData.date) {
+    if (!formData.amount || !formData.category_id || !formData.date) {
       alert('Completa todos los campos')
       return
     }
@@ -79,17 +107,20 @@ export default function IncomesPage() {
       const amount = parseFloat(formData.amount)
       if (amount <= 0) {
         alert('El monto debe ser mayor a 0')
+        setIsSubmitting(false)
         return
       }
 
       const { data, error } = await supabase
         .from('transactions')
         .insert([{
-          user_id: user?.id,
+          user_id: user.id,
           account_id: parseInt(selectedAccountId),
           amount: amount,
-          category: formData.category,
-          date: new Date(formData.date).toISOString()
+          category_id: parseInt(formData.category_id),
+          type: 'income',
+          date: new Date(formData.date).toISOString(),
+          description: formData.description
         }])
         .select()
         .single()
@@ -99,17 +130,15 @@ export default function IncomesPage() {
         throw error
       }
 
-      // Actualizar la lista local
       setTransactions(prev => [data, ...prev])
       
-      // Limpiar formulario
       setFormData({
         amount: '',
-        category: '',
-        date: new Date().toISOString().split('T')[0]
+        category_id: '',
+        date: new Date().toISOString().split('T')[0],
+        description: ''
       })
 
-      // Refrescar el saldo de la cuenta
       refetchAccounts()
 
     } catch (error) {
@@ -155,8 +184,9 @@ export default function IncomesPage() {
 
           <CategoryManager
             type="income"
-            selectedCategory={formData.category}
-            onCategorySelect={(category) => setFormData(prev => ({ ...prev, category }))}
+            selectedCategoryId={formData.category_id}
+            onCategorySelect={(id) => setFormData(prev => ({ ...prev, category_id: id }))}
+            onCategoriesUpdate={fetchData}
           />
 
           <div className="form-group">
@@ -170,10 +200,21 @@ export default function IncomesPage() {
             />
           </div>
 
+          <div className="form-group">
+            <label>Descripción (Opcional)</label>
+            <input
+              type="text"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Ej: Salario mensual"
+              disabled={isSubmitting}
+            />
+          </div>
+
           <button 
             type="submit" 
             className="submit-button"
-            disabled={isSubmitting || !formData.category}
+            disabled={isSubmitting || !formData.category_id}
           >
             {isSubmitting ? 'Agregando...' : 'Agregar Ingreso'}
           </button>
@@ -188,15 +229,21 @@ export default function IncomesPage() {
           <p>No hay ingresos registrados para esta cuenta.</p>
         ) : (
           <div className="transactions-grid">
-            {transactions.map(transaction => (
-              <div key={transaction.id} className="transaction-card">
-                <div className="transaction-info">
-                  <h3>${transaction.amount.toLocaleString()}</h3>
-                  <p>{transaction.category}</p>
-                  <p>{new Date(transaction.date).toLocaleDateString()}</p>
+            {transactions.map(transaction => {
+              const category = categoryMap[transaction.category_id];
+              return (
+                <div key={transaction.id} className="transaction-card">
+                  <div className="transaction-info">
+                    <h3>${transaction.amount.toLocaleString()}</h3>
+                    <p style={{ color: category?.color || '#ccc' }}>
+                      {category?.name || 'Sin categoría'}
+                    </p>
+                    <p>{new Date(transaction.date).toLocaleDateString()}</p>
+                    {transaction.description && <p className="transaction-description">{transaction.description}</p>}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
