@@ -164,7 +164,7 @@ export default function ReportsPage() {
               fileName={`Reporte_${dateRange.start}_a_${dateRange.end}.pdf`}
               style={{ marginBottom: '16px', display: 'inline-block', padding: '8px 16px', background: '#007bff', color: '#fff', borderRadius: 4, textDecoration: 'none' }}
             >
-              {({ loading }) => loading ? 'Generando PDF...' : '📄 Descargar PDF bonito'}
+              {({ loading }) => loading ? 'Generando PDF...' : '📄 Descargar PDF'}
             </PDFDownloadLink>
             <div id="report-content">
                 <div className="date-filter-container">
