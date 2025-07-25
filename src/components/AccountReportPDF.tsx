@@ -31,15 +31,27 @@ interface Props {
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontSize: 12, fontFamily: 'Helvetica' },
-  title: { fontSize: 22, marginBottom: 12, textAlign: 'center', fontWeight: 'bold' },
-  section: { marginBottom: 16 },
-  card: { marginBottom: 8, padding: 8, border: '1 solid #eee', borderRadius: 4 },
-  label: { fontSize: 14, fontWeight: 'bold' },
-  value: { fontSize: 14, marginBottom: 4 },
-  table: { width: '100%', marginBottom: 12 }, // Cambia display: 'table' por width
-  tableRow: { flexDirection: 'row' },
-  tableCell: { flex: 1, padding: 4, borderBottom: '1 solid #eee' },
+  title: { fontSize: 26, marginBottom: 10, textAlign: 'center', fontWeight: 'bold', color: '#222' },
+  subtitle: { fontSize: 14, marginBottom: 20, textAlign: 'center', color: '#555' },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  summaryCard: { flex: 1, margin: 4, padding: 12, borderRadius: 8, backgroundColor: '#f6f6f6', border: '1 solid #e0e3e8' },
+  summaryLabel: { fontSize: 13, color: '#333', marginBottom: 2 },
+  summaryValueIncome: { fontSize: 16, fontWeight: 'bold', color: '#2e7d32' }, // verde
+  summaryValueExpense: { fontSize: 16, fontWeight: 'bold', color: '#c62828' }, // rojo
+  summaryValueBalance: { fontSize: 16, fontWeight: 'bold', color: '#1565c0' }, // azul
+  sectionTitle: { fontSize: 15, fontWeight: 'bold', marginBottom: 8, marginTop: 16, color: '#222' },
+  table: { width: '100%', borderRadius: 6, overflow: 'hidden' },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#ececec', borderBottom: '1 solid #d1d5db' },
+  tableHeaderCell: { flex: 1, padding: 6, fontWeight: 'bold', fontSize: 12, color: '#222' },
+  tableRow: { flexDirection: 'row', borderBottom: '1 solid #f0f0f0' },
+  tableCell: { flex: 1, padding: 6, fontSize: 11, color: '#444' },
+  tableRowAlt: { backgroundColor: '#f8fafc' },
+  noData: { fontSize: 12, color: '#888', marginTop: 12, textAlign: 'center' },
 });
+
+function formatDate(date: string) {
+  return date.split('T')[0];
+}
 
 export function AccountReportPDF({
   accountName,
@@ -50,42 +62,50 @@ export function AccountReportPDF({
   return (
     <Document>
       <Page style={styles.page}>
-        <Text style={styles.title}>Reporte de Cuenta: {accountName}</Text>
-        <View style={styles.section}>
-          <Text>Período: {dateRange.start} a {dateRange.end}</Text>
+        <Text style={styles.title}>Reporte de Cuenta: {accountName || 'Sin nombre'}</Text>
+        <Text style={styles.subtitle}>
+          Período: {dateRange.start} a {dateRange.end}
+        </Text>
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>Ingresos Totales</Text>
+            <Text style={styles.summaryValueIncome}>${reportData.totalIncome.toLocaleString()}</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>Gastos Totales</Text>
+            <Text style={styles.summaryValueExpense}>${reportData.totalExpense.toLocaleString()}</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryLabel}>Balance Neto</Text>
+            <Text style={styles.summaryValueBalance}>${reportData.netBalance.toLocaleString()}</Text>
+          </View>
         </View>
-        <View style={styles.section}>
-          <View style={styles.card}>
-            <Text style={styles.label}>Ingresos Totales:</Text>
-            <Text style={styles.value}>${reportData.totalIncome.toLocaleString()}</Text>
+        <Text style={styles.sectionTitle}>Transacciones</Text>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={styles.tableHeaderCell}>Fecha</Text>
+            <Text style={styles.tableHeaderCell}>Tipo</Text>
+            <Text style={styles.tableHeaderCell}>Categoría</Text>
+            <Text style={styles.tableHeaderCell}>Monto</Text>
           </View>
-          <View style={styles.card}>
-            <Text style={styles.label}>Gastos Totales:</Text>
-            <Text style={styles.value}>${reportData.totalExpense.toLocaleString()}</Text>
-          </View>
-          <View style={styles.card}>
-            <Text style={styles.label}>Balance Neto:</Text>
-            <Text style={styles.value}>${reportData.netBalance.toLocaleString()}</Text>
-          </View>
-        </View>
-        <View style={styles.section}>
-          <Text style={styles.label}>Transacciones:</Text>
-          <View style={styles.table}>
-            <View style={styles.tableRow}>
-              <Text style={styles.tableCell}>Fecha</Text>
-              <Text style={styles.tableCell}>Tipo</Text>
-              <Text style={styles.tableCell}>Categoría</Text>
-              <Text style={styles.tableCell}>Monto</Text>
-            </View>
-            {transactions.map((t: Transaction, idx: number) => (
-              <View style={styles.tableRow} key={idx}>
-                <Text style={styles.tableCell}>{t.date}</Text>
+          {transactions.length === 0 ? (
+            <Text style={styles.noData}>No hay transacciones en el período seleccionado.</Text>
+          ) : (
+            transactions.map((t: Transaction, idx: number) => (
+              <View
+                style={[
+                  styles.tableRow,
+                  idx % 2 === 1 ? styles.tableRowAlt : null,
+                ]}
+                key={idx}
+              >
+                <Text style={styles.tableCell}>{formatDate(t.date)}</Text>
                 <Text style={styles.tableCell}>{t.type === 'income' ? 'Ingreso' : 'Gasto'}</Text>
                 <Text style={styles.tableCell}>{reportData.categoryMap[t.category_id]?.name || 'Sin Categoría'}</Text>
                 <Text style={styles.tableCell}>${t.amount.toLocaleString()}</Text>
               </View>
-            ))}
-          </View>
+            ))
+          )}
         </View>
       </Page>
     </Document>
