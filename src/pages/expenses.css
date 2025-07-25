@@ -9,70 +9,97 @@
   min-height: 100vh;
 }
 
-/* Título */
-.expenses-title {
+/* --- HEADER --- */
+.expenses-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.expenses-header h1 {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
-  text-align: center;
   color: #ffffff;
 }
 
-/* Subtítulo */
-.expenses-subtitle {
+.expenses-header p {
   font-size: 1.2rem;
   color: #a0a0a0;
-  text-align: center;
-  margin-bottom: 2rem;
 }
 
-/* Formularios */
-.expenses-form {
-  display: flex;
-  gap: 0.5rem;
+/* --- FORMULARIOS --- */
+.expenses-form-container {
+  background-color: #1e1e1e;
+  padding: 2.5rem;
+  border-radius: 16px;
   margin-bottom: 3rem;
-  flex-wrap: wrap;
-  background-color: #1e1e1e; /* Fondo de tarjeta */
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-.expenses-form--category input,
-.expenses-form--entry select,
-.expenses-form--entry input {
-  flex: 1 1 180px;
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
-  border: 1px solid #333;
+/* --- GRID LAYOUT PARA EL FORMULARIO --- */
+.expenses-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Dos columnas iguales */
+  gap: 1.5rem 1rem; /* Espacio vertical y horizontal */
+  align-items: end; /* Alinea los items en la parte inferior */
+}
+
+.expenses-form .form-group {
+  margin-bottom: 0;
+}
+
+.expenses-form label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+  color: #b3b3b3;
+  font-size: 0.9rem;
+}
+
+/* --- Elementos que ocupan el ancho completo --- */
+.expenses-form .category-manager-container,
+.expenses-form .description-group {
+  grid-column: 1 / -1; /* Ocupa desde la primera a la última columna */
+}
+
+.expenses-form input[type="number"],
+.expenses-form input[type="date"],
+.expenses-form input[type="text"] {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background-color: #2a2a2a;
+  border: 1px solid #383838;
   border-radius: 8px;
-  background: #2a2a2a;
   color: #e0e0e0;
-  box-sizing: border-box;
+  font-size: 1rem;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.expenses-form--entry input.entry-amount {
-  flex: 1 1 100px;
+.expenses-form input:focus {
+  outline: none;
+  border-color: #e53e3e; /* Rojo para gastos */
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.3);
 }
 
-.expenses-form button {
-  flex: 0 0 auto;
-  padding: 0.75rem 1rem;
+.submit-button {
+  grid-column: 1 / -1; /* Ocupa el ancho completo */
+  margin-top: 1rem; /* Espacio extra arriba */
+  padding: 1rem;
   font-size: 1.1rem;
   font-weight: bold;
+  color: #ffffff;
+  background-color: #e53e3e; /* Rojo para gastos */
   border: none;
   border-radius: 8px;
-  background: #e53e3e;
-  color: white;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.2s;
 }
 
-.expenses-form button:hover:not(:disabled) {
+.submit-button:hover:not(:disabled) {
   background-color: #fc8181;
+  transform: scale(1.02);
 }
 
-.expenses-form button:disabled {
+.submit-button:disabled {
   background-color: #535353;
   cursor: not-allowed;
 }
@@ -89,7 +116,7 @@
   color: #ff5555;
 }
 
-/* Lista de gastos */
+/* --- LISTA DE GASTOS --- */
 .expenses-list {
   display: grid;
   gap: 1.5rem;
@@ -135,6 +162,7 @@
   text-align: center;
   margin-bottom: 2rem;
   color: #ffffff;
+  font-weight: 500;
 }
 
 /* Estilo para la cuadrícula de transacciones */
@@ -158,7 +186,6 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-/* Información de la transacción */
 .transaction-info h3 {
   margin: 0 0 0.5rem 0;
   font-size: 1.75rem;

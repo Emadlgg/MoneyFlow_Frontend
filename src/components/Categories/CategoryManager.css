@@ -1,0 +1,100 @@
+.category-manager {
+  width: 100%;
+}
+
+/* Contenedor para el selector y el botón '+' */
+.category-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.category-select {
+  flex-grow: 1; /* Hace que el select ocupe el espacio disponible */
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background-color: #2a2a2a;
+  border: 1px solid #383838;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a0a0a0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+}
+
+.category-select:focus {
+  outline: none;
+  border-color: #1db954;
+  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.3);
+}
+
+.add-category-btn {
+  padding: 0.85rem 1rem;
+  background-color: #333;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap; /* Evita que el texto se parta */
+  transition: background-color 0.2s;
+}
+
+.add-category-btn:hover {
+  background-color: #444;
+}
+
+/* Formulario para crear nueva categoría */
+.create-category-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.new-category-input {
+  flex-grow: 1;
+  padding: 0.85rem 1rem;
+  background-color: #2a2a2a;
+  border: 1px solid #383838;
+  border-radius: 8px;
+  color: #e0e0e0;
+}
+
+.new-category-color {
+  height: 44px;
+  width: 44px;
+  padding: 4px;
+  border: none;
+  border-radius: 8px;
+  background-color: #2a2a2a;
+  cursor: pointer;
+}
+
+.create-category-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.save-btn, .cancel-btn {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.save-btn {
+  background-color: #1db954;
+  color: white;
+}
+
+.cancel-btn {
+  background-color: #555;
+  color: #e0e0e0;
+}

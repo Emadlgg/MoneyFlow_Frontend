@@ -1,186 +1,110 @@
-import React, { useState } from 'react'
-import { useCategory } from '../../contexts/CategoryContext'
+import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../../services/supabaseClient';
+import { useAuth } from '../../contexts/AuthContext';
+import './CategoryManager.css';
 
 interface CategoryManagerProps {
   type: 'income' | 'expense';
-  selectedCategoryId: string; // Changed from selectedCategory
+  selectedCategoryId: string;
   onCategorySelect: (id: string) => void;
   onCategoriesUpdate?: () => void;
 }
 
-export default function CategoryManager({ 
-  type, 
-  selectedCategoryId, // Changed from selectedCategory
-  onCategorySelect,
-  onCategoriesUpdate 
-}: CategoryManagerProps) {
-  const { incomeCategories, expenseCategories, createCategory } = useCategory()
-  const [isCreating, setIsCreating] = useState(false)
-  const [newCategoryName, setNewCategoryName] = useState('')
-  const [newCategoryColor, setNewCategoryColor] = useState('#333333')
-  const [error, setError] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
+export default function CategoryManager({ type, selectedCategoryId, onCategorySelect, onCategoriesUpdate }: CategoryManagerProps) {
+  const { user } = useAuth();
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState(type === 'income' ? '#28a745' : '#e53e3e');
 
-  const categories = type === 'income' ? incomeCategories : expenseCategories
+  const fetchCategories = useCallback(async () => {
+    if (!user) return;
 
-  const colors = [
-    '#dc3545', '#28a745', '#007bff', '#ffc107', '#6f42c1',
-    '#e83e8c', '#fd7e14', '#20c997', '#17a2b8', '#6c757d'
-  ]
+    // --- INICIO DE LA CORRECCIÓN FINAL ---
+    // Llamamos a la función de base de datos 'get_user_categories'
+    const { data, error } = await supabase.rpc('get_user_categories', {
+      p_user_id: user.id,
+      p_type: type,
+    });
+    // --- FIN DE LA CORRECCIÓN FINAL ---
 
-  // Debug log
-  console.log('🎯 CategoryManager render:', { 
-    type, 
-    categoriesCount: categories.length, 
-    selectedCategoryId,
-    isCreating 
-  })
+    if (error) {
+      console.error('Error fetching categories via rpc:', error);
+    } else if (data) {
+      // Elimina duplicados por nombre (ignorando mayúsculas/minúsculas)
+      const uniqueCategories = Array.from(
+        new Map(data.map(cat => [cat.name.trim().toLowerCase(), cat])).values()
+      );
+      // Ordena alfabéticamente
+      uniqueCategories.sort((a, b) => a.name.localeCompare(b.name));
+      setCategories(uniqueCategories);
+    }
+  }, [user, type]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   const handleCreateCategory = async () => {
-    console.log('🎯 handleCreateCategory called with:', { newCategoryName, type, newCategoryColor })
-    setError('')
-    
-    if (!newCategoryName.trim()) {
-      setError('El nombre de la categoría es requerido')
-      console.log('❌ Empty category name')
-      return
-    }
+    if (!user || !newCategoryName.trim()) return;
 
-    setIsSubmitting(true)
-    try {
-      console.log('🎯 CategoryManager: About to call createCategory...')
-      
-      await createCategory(newCategoryName.trim(), type, newCategoryColor)
-      
-      console.log('🎯 CategoryManager: Category created successfully')
-      setNewCategoryName('')
-      setNewCategoryColor('#333333')
-      setIsCreating(false)
-      if (onCategoriesUpdate) onCategoriesUpdate() // Notify parent component
-    } catch (error: any) {
-      console.error('🎯 CategoryManager: Error creating category:', error)
-      setError(error.message || 'Error al crear la categoría')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({ name: newCategoryName.trim(), user_id: user.id, type: type, color: newCategoryColor })
+      .select()
+      .single();
 
-  const handleCancel = () => {
-    setIsCreating(false)
-    setNewCategoryName('')
-    setNewCategoryColor('#333333')
-    setError('')
-  }
+    if (error) {
+      console.error('Error creating category:', error);
+    } else if (data) {
+      setNewCategoryName('');
+      setNewCategoryColor(type === 'income' ? '#28a745' : '#e53e3e');
+      setIsCreating(false);
+      fetchCategories();
+      onCategorySelect(data.id.toString());
+    }
+  };
 
   return (
     <div className="category-manager">
-      <div className="form-group">
-        <label>Categoría</label>
+      {isCreating ? (
+        <div className="create-category-form">
+          <input
+            type="text"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            placeholder="Nombre de la categoría"
+            className="new-category-input"
+          />
+          <input
+            type="color"
+            value={newCategoryColor}
+            onChange={(e) => setNewCategoryColor(e.target.value)}
+            className="new-category-color"
+          />
+          <div className="create-category-actions">
+            <button onClick={handleCreateCategory} className="save-btn">Guardar</button>
+            <button onClick={() => setIsCreating(false)} className="cancel-btn">Cancelar</button>
+          </div>
+        </div>
+      ) : (
         <div className="category-select-wrapper">
           <select
-            value={selectedCategoryId} // Changed from selectedCategory
+            value={selectedCategoryId}
             onChange={(e) => onCategorySelect(e.target.value)}
-            disabled={isCreating || categories.length === 0}
             required
+            className="category-select"
           >
-            <option value="">Seleccione una categoría</option>
-            {categories.map(category => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
+            <option value="" disabled>Seleccione una categoría</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        className="btn btn-primary"
-        onClick={() => setIsCreating(true)}
-        disabled={isSubmitting}
-      >
-        + Nueva categoría
-      </button>
-
-      {isCreating && (
-        <div className="category-creator">
-          <h4>Crear nueva categoría ({type === 'income' ? 'Ingreso' : 'Gasto'})</h4>
-          <div className="category-form">
-            {error && (
-              <div className="category-error">
-                {error}
-              </div>
-            )}
-            
-            <div className="category-form-group">
-              <input
-                type="text"
-                placeholder="Nombre de la categoría"
-                value={newCategoryName}
-                onChange={(e) => {
-                  console.log('🎯 Category name changed:', e.target.value)
-                  setNewCategoryName(e.target.value)
-                }}
-                disabled={isSubmitting}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    console.log('🎯 Enter pressed, calling handleCreateCategory')
-                    e.preventDefault()
-                    handleCreateCategory()
-                  }
-                }}
-              />
-              
-              <div className="color-picker">
-                <span className="color-picker-label">Color:</span>
-                {colors.map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`color-option ${newCategoryColor === color ? 'color-option--selected' : ''}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => {
-                      console.log('🎯 Color selected:', color)
-                      setNewCategoryColor(color)
-                    }}
-                    title={color}
-                    disabled={isSubmitting}
-                  />
-                ))}
-              </div>
-            </div>
-            
-            <div className="category-form-actions">
-              <button
-                type="button"
-                className="category-btn category-btn--cancel"
-                onClick={(e) => {
-                  console.log('🎯 Cancel button clicked')
-                  e.preventDefault()
-                  e.stopPropagation()
-                  handleCancel()
-                }}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="category-btn category-btn--create"
-                onClick={(e) => {
-                  console.log('🎯 Create button clicked!')
-                  e.preventDefault()
-                  e.stopPropagation()
-                  handleCreateCategory()
-                }}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Creando...' : 'Crear'}
-              </button>
-            </div>
-          </div>
+          <button onClick={() => setIsCreating(true)} className="add-category-btn">
+            + Nueva categoría
+          </button>
         </div>
       )}
     </div>
-  )
+  );
 }

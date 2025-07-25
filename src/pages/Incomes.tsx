@@ -168,8 +168,10 @@ export default function IncomesPage() {
       </div>
 
       <div className="incomes-form-container">
-        <form onSubmit={handleSubmit} className="incomes-form">
-          <div className="form-group">
+        {/* Cambiamos <form> por <div> y le asignamos la clase del grid */}
+        <div className="incomes-form">
+          {/* --- Fila 1 --- */}
+          <div className="form-group amount-group">
             <label>Monto</label>
             <input
               type="number"
@@ -182,14 +184,7 @@ export default function IncomesPage() {
             />
           </div>
 
-          <CategoryManager
-            type="income"
-            selectedCategoryId={formData.category_id}
-            onCategorySelect={(id) => setFormData(prev => ({ ...prev, category_id: id }))}
-            onCategoriesUpdate={fetchData}
-          />
-
-          <div className="form-group">
+          <div className="form-group date-group">
             <label>Fecha</label>
             <input
               type="date"
@@ -200,7 +195,19 @@ export default function IncomesPage() {
             />
           </div>
 
-          <div className="form-group">
+          {/* --- Fila 2 (Ancho completo) --- */}
+          <div className="category-group">
+            <label>Categoría</label>
+            <CategoryManager
+              type="income"
+              selectedCategoryId={formData.category_id}
+              onCategorySelect={(id) => setFormData(prev => ({ ...prev, category_id: id }))}
+              onCategoriesUpdate={fetchData}
+            />
+          </div>
+
+          {/* --- Fila 3 (Ancho completo) --- */}
+          <div className="form-group description-group">
             <label>Descripción (Opcional)</label>
             <input
               type="text"
@@ -211,14 +218,16 @@ export default function IncomesPage() {
             />
           </div>
 
+          {/* --- Fila 4 (Botón de envío) --- */}
           <button 
             type="submit" 
+            onClick={handleSubmit}
             className="submit-button"
-            disabled={isSubmitting || !formData.category_id}
+            disabled={isSubmitting || !formData.category_id || !formData.amount}
           >
             {isSubmitting ? 'Agregando...' : 'Agregar Ingreso'}
           </button>
-        </form>
+        </div>
       </div>
 
       <div className="incomes-list">

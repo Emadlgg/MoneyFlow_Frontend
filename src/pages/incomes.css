@@ -9,6 +9,34 @@
   min-height: 100vh;
 }
 
+/* --- NUEVO GRID LAYOUT PARA EL FORMULARIO --- */
+.incomes-form {
+  display: grid;
+  /* Definimos las áreas del grid */
+  grid-template-areas:
+    "amount   date"
+    "category category"
+    "desc     desc"
+    "button   button";
+  grid-template-columns: 1fr 1fr; /* Dos columnas de ancho flexible */
+  gap: 1.5rem 1.25rem; /* Espacio vertical y horizontal */
+}
+
+/* Asignamos cada clase a su área correspondiente */
+.amount-group { grid-area: amount; }
+.date-group { grid-area: date; }
+.category-group { grid-area: category; } /* Apunta a la nueva clase */
+.description-group { grid-area: desc; }
+.submit-button { grid-area: button; }
+
+.incomes-form-container {
+  background-color: #1e1e1e;
+  padding: 2.5rem;
+  border-radius: 16px;
+  margin-bottom: 3rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
 /* Título */
 .incomes-title {
   font-size: 2.5rem;
@@ -26,39 +54,25 @@
 }
 
 /* Formularios */
-.incomes-form {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-.incomes-form-container {
-  background-color: #1e1e1e; /* Fondo de tarjeta */
-  padding: 2rem;
-  border-radius: 12px;
-  margin-bottom: 3rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-}
-
 .incomes-form .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 0; /* El gap del grid maneja el espaciado */
 }
 
 .incomes-form label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   font-weight: 500;
   color: #b3b3b3;
+  font-size: 0.9rem;
 }
 
 .incomes-form input[type="number"],
 .incomes-form input[type="date"],
 .incomes-form input[type="text"] {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.85rem 1rem;
   background-color: #2a2a2a;
-  border: 1px solid #333;
+  border: 1px solid #383838;
   border-radius: 8px;
   color: #e0e0e0;
   font-size: 1rem;
@@ -67,39 +81,29 @@
 
 .incomes-form input:focus {
   outline: none;
-  border-color: #1db954; /* Verde Spotify como acento */
+  border-color: #1db954; /* Verde para ingresos */
   box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.3);
 }
 
-.incomes-form select {
-  flex: 1 1 200px;
-  padding: 0.5rem;
-  font-size: 1rem;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background: #1a1a1a;
-  color: #eee;
-  box-sizing: border-box;
-}
-
-.incomes-form button {
-  width: 100%;
+.submit-button {
+  margin-top: 1rem;
   padding: 1rem;
   font-size: 1.1rem;
   font-weight: bold;
   color: #ffffff;
-  background-color: #1db954;
+  background-color: #1db954; /* Verde para ingresos */
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.2s;
 }
 
-.incomes-form button:hover:not(:disabled) {
+.submit-button:hover:not(:disabled) {
   background-color: #1ed760;
+  transform: scale(1.02);
 }
 
-.incomes-form button:disabled {
+.submit-button:disabled {
   background-color: #535353;
   cursor: not-allowed;
 }
@@ -120,6 +124,7 @@
   text-align: center;
   margin-bottom: 2rem;
   color: #ffffff;
+  font-weight: 500;
 }
 
 /* Cada item */
