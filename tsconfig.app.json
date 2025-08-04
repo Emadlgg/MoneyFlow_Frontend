@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src", "src/test/LoginForm.test.tsx", "src/test/PrivateRoute.test.tsx"]
 }
