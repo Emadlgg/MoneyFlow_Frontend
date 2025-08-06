@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import LoginForm from '../components/Auth/LoginForm'
 import '@testing-library/jest-dom'
 
+
 // Mocks
 const mockSignIn = jest.fn()
 const mockNavigate = jest.fn()

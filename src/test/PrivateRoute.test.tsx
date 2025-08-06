@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import PrivateRoute from '../components/Auth/PrivateRoute'
 import '@testing-library/jest-dom'
 
+
 // Mock de Navigate
 const mockNavigate = jest.fn()
 jest.mock('react-router-dom', () => ({
