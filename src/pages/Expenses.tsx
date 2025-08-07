@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSelectedAccount } from '../contexts/SelectedAccountContext'
 import { useAccount } from '../contexts/AccountContext'
 import CategoryManager from '../components/Categories/CategoryManager'
+import { useSpendingLimits } from '../hooks/useSpendingLimits'
 import './expenses.css'
 
 interface Transaction {
@@ -25,12 +26,13 @@ export default function ExpensesPage() {
   const { user } = useAuth()
   const { selectedAccountId } = useSelectedAccount()
   const { accounts, refetch: refetchAccounts } = useAccount()
+  const { checkSpendingLimits } = useSpendingLimits(user?.id || '')
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [categories, setCategories] = useState<Category[]>([]) // Add state for categories
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     amount: '',
-    category_id: '', // Changed from category: ''
+    category_id: '',
     date: new Date().toISOString().split('T')[0],
     description: ''
   })
@@ -117,7 +119,7 @@ export default function ExpensesPage() {
           user_id: user.id,
           account_id: parseInt(selectedAccountId),
           amount: -amount, // Negativo para gastos
-          category_id: parseInt(formData.category_id), // Changed from category
+          category_id: parseInt(formData.category_id),
           type: 'expense',
           date: new Date(formData.date).toISOString(),
           description: formData.description
@@ -136,13 +138,18 @@ export default function ExpensesPage() {
       // Limpiar formulario
       setFormData({
         amount: '',
-        category_id: '', // Changed from category
+        category_id: '',
         date: new Date().toISOString().split('T')[0],
         description: ''
       })
 
       // Refrescar el saldo de la cuenta
       refetchAccounts()
+
+      // ¡VERIFICAR LÍMITES DESPUÉS DE AGREGAR GASTO!
+      setTimeout(() => {
+        checkSpendingLimits()
+      }, 1000)
 
     } catch (error) {
       console.error('Error adding expense:', error)
@@ -165,6 +172,30 @@ export default function ExpensesPage() {
 
   return (
     <div className="expenses-page">
+      {/* BOTÓN DE TESTING - ELIMINAR DESPUÉS */}
+      <button 
+        onClick={() => {
+          console.log('🔄 Forzando verificación de límites...');
+          checkSpendingLimits();
+        }}
+        style={{
+          position: 'fixed',
+          top: '10px',
+          left: '10px',
+          zIndex: 9999,
+          background: '#dc3545',
+          color: 'white',
+          padding: '10px 15px',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: 'bold'
+        }}
+      >
+        🔍 VERIFICAR LÍMITES AHORA
+      </button>
+
       <div className="expenses-header">
         <h1>Gastos - {selectedAccount.name}</h1>
         <p>Saldo actual: ${selectedAccount.balance.toLocaleString()}</p>
