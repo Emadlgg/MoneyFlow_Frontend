@@ -175,33 +175,47 @@ export default function ExpensesPage() {
       {/* Componente de alertas con referencia */}
       <SpendingAlerts ref={spendingAlertsRef} />
 
-      {/* BOTÓN DE TESTING - ELIMINAR DESPUÉS */}
-      <button 
-        onClick={() => {
-          console.log('🔄 Forzando verificación de límites...');
-          spendingAlertsRef.current?.forceCheck();
-        }}
-        style={{
-          position: 'fixed',
-          top: '10px',
-          left: '10px',
-          zIndex: 9999,
-          background: '#dc3545',
-          color: 'white',
-          padding: '10px 15px',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontWeight: 'bold'
-        }}
-      >
-        🔍 VERIFICAR LÍMITES AHORA
-      </button>
-
       <div className="expenses-header">
-        <h1>Gastos - {selectedAccount.name}</h1>
-        <p>Saldo actual: ${selectedAccount.balance.toLocaleString()}</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1>Gastos - {selectedAccount.name}</h1>
+            <p>Saldo actual: ${selectedAccount.balance.toLocaleString()}</p>
+          </div>
+          
+          {/* BOTÓN MOVIDO AQUÍ - Al lado del header */}
+          <button 
+            onClick={() => {
+              console.log('🔄 Forzando verificación de límites...');
+              spendingAlertsRef.current?.forceCheck();
+            }}
+            style={{
+              background: '#dc3545',
+              color: 'white',
+              padding: '8px 12px',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 4px rgba(220, 53, 69, 0.2)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#c82333';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#dc3545';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+            title="Verificar límites de gastos"
+          >
+            🔍 Verificar Límites
+          </button>
+        </div>
       </div>
 
       <div className="expenses-form-container">
