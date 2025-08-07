@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import { useSelectedAccount } from '../contexts/SelectedAccountContext'
 import { useAccount } from '../contexts/AccountContext'
 import CategoryManager from '../components/Categories/CategoryManager'
-import { useSpendingLimits } from '../hooks/useSpendingLimits'
+import SpendingAlerts, { SpendingAlertsRef } from '../components/SpendingAlerts'
 import './expenses.css'
 
 interface Transaction {
@@ -26,7 +26,7 @@ export default function ExpensesPage() {
   const { user } = useAuth()
   const { selectedAccountId } = useSelectedAccount()
   const { accounts, refetch: refetchAccounts } = useAccount()
-  const { checkSpendingLimits } = useSpendingLimits(user?.id || '')
+  const spendingAlertsRef = useRef<SpendingAlertsRef>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -148,7 +148,7 @@ export default function ExpensesPage() {
 
       // ¡VERIFICAR LÍMITES DESPUÉS DE AGREGAR GASTO!
       setTimeout(() => {
-        checkSpendingLimits()
+        spendingAlertsRef.current?.forceCheck()
       }, 1000)
 
     } catch (error) {
@@ -172,11 +172,14 @@ export default function ExpensesPage() {
 
   return (
     <div className="expenses-page">
+      {/* Componente de alertas con referencia */}
+      <SpendingAlerts ref={spendingAlertsRef} />
+
       {/* BOTÓN DE TESTING - ELIMINAR DESPUÉS */}
       <button 
         onClick={() => {
           console.log('🔄 Forzando verificación de límites...');
-          checkSpendingLimits();
+          spendingAlertsRef.current?.forceCheck();
         }}
         style={{
           position: 'fixed',

@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { useSpendingLimits } from '../hooks/useSpendingLimits';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function SpendingAlerts() {
+interface SpendingAlertsRef {
+  forceCheck: () => void;
+}
+
+const SpendingAlerts = forwardRef<SpendingAlertsRef>((props, ref) => {
   const { user } = useAuth();
   const { alerts, loading, checkSpendingLimits } = useSpendingLimits(user?.id || '');
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
@@ -22,6 +26,16 @@ export default function SpendingAlerts() {
     setDismissedAlerts([]);
     setAlertsVersion(prev => prev + 1); // Forzar re-render
   }, [alerts.length, JSON.stringify(alerts)]); // Dependencia más específica
+
+  // Exponer función para forzar verificación y reset
+  useImperativeHandle(ref, () => ({
+    forceCheck: () => {
+      console.log('🔄 Forzando verificación y reset de alertas cerradas...');
+      setDismissedAlerts([]); // Resetear alertas cerradas PRIMERO
+      setAlertsVersion(prev => prev + 1); // Forzar re-render
+      checkSpendingLimits(); // Verificar límites
+    }
+  }));
 
   // Filtrar alertas que no han sido cerradas
   const visibleAlerts = alerts.filter(alert => {
@@ -144,4 +158,9 @@ export default function SpendingAlerts() {
       ))}
     </div>
   );
-}
+});
+
+SpendingAlerts.displayName = 'SpendingAlerts';
+
+export default SpendingAlerts;
+export type { SpendingAlertsRef };
