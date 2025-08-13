@@ -19,6 +19,8 @@ import IncomesPage from './pages/Incomes'
 import ExpensesPage from './pages/Expenses'
 import ReportsPage from './pages/Reports'
 import HomePage from './pages/Home'
+import Login from './components/Auth/LoginForm'
+import Register from './components/Auth/RegisterForm'
 
 import './assets/style/layout.css'
 
@@ -41,8 +43,8 @@ function AppContent() {
       <Router>
         <Routes>
           <Route path="/home" element={<HomePage />} />
-          <Route path="/login" element={<HomePage />} />
-          <Route path="/register" element={<HomePage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </Router>
