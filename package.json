@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:integration": "cypress run",
+    "test:integration:open": "cypress open",
+    "test:all": "npm test && npm run test:integration"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.0",
@@ -26,6 +29,7 @@
     "recharts": "^2.15.3"
   },
   "devDependencies": {
+    "@cypress/react": "^9.0.1",
     "@eslint/js": "^9.21.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.4",
@@ -37,6 +41,7 @@
     "@types/react": "^18.0.28",
     "@types/react-dom": "^18.0.11",
     "@vitejs/plugin-react": "^4.4.1",
+    "cypress": "^15.0.0",
     "eslint": "^9.21.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
@@ -64,5 +69,11 @@
   "bugs": {
     "url": "https://github.com/Emadlgg/MoneyFlow_Frontend/issues"
   },
-  "homepage": "https://github.com/Emadlgg/MoneyFlow_Frontend#readme"
+  "homepage": "https://github.com/Emadlgg/MoneyFlow_Frontend#readme",
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ]
+  }
 }

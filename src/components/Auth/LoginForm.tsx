@@ -25,29 +25,37 @@ export default function LoginForm() {
     <div className="auth-page">
       <form onSubmit={handleSubmit} className="auth-page__form">
         <h2 className="auth-page__title">Iniciar sesión</h2>
-        {error && <p className="text-red-500 mb-2">{error}</p>}
+        {error && <p className="auth-page__error" data-testid="error-message">{error}</p>}
 
         <div className="auth-page__content">
           <div className="auth-page__box">
-            <input
-              type="email"
-              placeholder=" "
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="auth-page__input"
-            />
-            <label className="auth-page__label">Email</label>
+            <div className="auth-page__box-input">
+              <input
+                data-testid="email-input"
+                type="email"
+                placeholder=" "
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="auth-page__input"
+                required
+              />
+              <label className="auth-page__label">Email</label>
+            </div>
           </div>
 
           <div className="auth-page__box">
-            <input
-              type="password"
-              placeholder=" "
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="auth-page__input"
-            />
-            <label className="auth-page__label">Contraseña</label>
+            <div className="auth-page__box-input">
+              <input
+                data-testid="password-input"
+                type="password"
+                placeholder=" "
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="auth-page__input"
+                required
+              />
+              <label className="auth-page__label">Contraseña</label>
+            </div>
           </div>
 
           <div className="auth-page__check-group">
@@ -61,7 +69,11 @@ export default function LoginForm() {
           </div>
         </div>
 
-        <button type="submit" className="auth-page__button">
+        <button 
+          data-testid="login-button"
+          type="submit" 
+          className="auth-page__button"
+        >
           Entrar
         </button>
                 
