@@ -1,9 +1,105 @@
-import { useEffect, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { useSpendingLimits } from '../hooks/useSpendingLimits';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SpendingAlertsRef {
-  forceCheck: () => void;
+  forceCheck: (overrideHidden?: boolean) => void;
+}
+
+type AlertItem = {
+  categoryId: string;
+  categoryName: string;
+  percentage: number;
+  currentSpent: number;
+  limit: number;
+};
+
+const LAST_SHOWN_KEY = "notificationLastShown";
+
+const containerStyle: React.CSSProperties = {
+  position: 'fixed',
+  top: 20,
+  right: 20,
+  zIndex: 9999,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 10,
+};
+
+const cardStyle = (isCritical: boolean): React.CSSProperties => ({
+  maxWidth: 350,
+  background: isCritical ? '#dc3545' : '#ffd95a',
+  color: isCritical ? '#fff' : '#111',
+  padding: 14,
+  paddingRight: 140, // espacio para botones en la derecha
+  borderRadius: 8,
+  boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+  border: `2px solid ${isCritical ? '#a71e2a' : '#e0a800'}`,
+  position: 'relative',
+});
+
+const closeBtnStyle = (isCritical: boolean): React.CSSProperties => ({
+  position: 'absolute',
+  top: 10,
+  right: 12,
+  background: isCritical ? 'rgba(15,23,36,0.9)' : 'rgba(15,23,36,0.85)',
+  color: '#FFD95A',
+  border: '1px solid rgba(255,255,255,0.04)',
+  borderRadius: 8,
+  padding: '6px 10px',
+  minWidth: 64,
+  height: 32,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 13,
+  fontWeight: 700,
+  boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
+});
+
+const pillStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 46,
+  right: 12,
+  minWidth: 96,
+  padding: '6px 10px',
+  borderRadius: 8,
+  background: 'rgba(255,255,255,0.06)',
+  color: '#0f1724',
+  border: '1px solid rgba(255,255,255,0.06)',
+  boxShadow: '0 8px 20px rgba(0,0,0,0.28)',
+  cursor: 'pointer',
+  fontWeight: 700,
+  fontSize: 13,
+  textAlign: 'center',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const titleStyle: React.CSSProperties = { margin: 0, fontSize: 16, fontWeight: 800 };
+const metaStyle: React.CSSProperties = { fontSize: 13, lineHeight: 1.4 };
+
+function todayISO() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function readLastShown(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_SHOWN_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+function writeLastShown(map: Record<string, string>) {
+  try {
+    localStorage.setItem(LAST_SHOWN_KEY, JSON.stringify(map));
+  } catch {}
 }
 
 const SpendingAlerts = forwardRef<SpendingAlertsRef>((props, ref) => {
@@ -11,154 +107,132 @@ const SpendingAlerts = forwardRef<SpendingAlertsRef>((props, ref) => {
   const { alerts, loading, checkSpendingLimits } = useSpendingLimits(user?.id || '');
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);
   const [alertsVersion, setAlertsVersion] = useState(0);
+  const [lastShownMap, setLastShownMap] = useState<Record<string, string>>({});
+  const [showHiddenOverride, setShowHiddenOverride] = useState<boolean>(false);
+  
+  useEffect(() => {
+    // cargar mapas de "no mostrar hoy"
+    setLastShownMap(readLastShown());
+  }, []);
 
   useEffect(() => {
-    if (user?.id) {
-      // Verificar inmediatamente al cargar
-      checkSpendingLimits();
-    }
+    if (user?.id) checkSpendingLimits();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // Resetear alertas cerradas cuando las alertas cambien
+  // reset dismissed cuando cambian las alertas
   useEffect(() => {
-    console.log('🔄 Alertas actualizadas, reseteando alertas cerradas');
-    console.log('📊 Alertas recibidas:', alerts);
     setDismissedAlerts([]);
-    setAlertsVersion(prev => prev + 1); // Forzar re-render
-  }, [alerts.length, JSON.stringify(alerts)]); // Dependencia más específica
+    setAlertsVersion((v) => v + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alerts.length, JSON.stringify(alerts)]);
 
-  // Exponer función para forzar verificación y reset
   useImperativeHandle(ref, () => ({
-    forceCheck: () => {
-      console.log('🔄 Forzando verificación y reset de alertas cerradas...');
-      setDismissedAlerts([]); // Resetear alertas cerradas PRIMERO
-      setAlertsVersion(prev => prev + 1); // Forzar re-render
-      checkSpendingLimits(); // Verificar límites
-    }
+    // por defecto forzamos a mostrar aunque estén marcadas como "no mostrar hoy"
+    forceCheck: (overrideHidden = true) => {
+      // reset dismissed in-session
+      setDismissedAlerts([]);
+      setAlertsVersion((v) => v + 1);
+
+      if (overrideHidden) {
+        setShowHiddenOverride(true);
+        // mostrar durante unos segundos sin modificar localStorage
+        setTimeout(() => setShowHiddenOverride(false), 5000);
+      }
+      // siempre re-ejecutamos la comprobación
+      checkSpendingLimits();
+      // refrescar mapa persistente por si cambió en otra pestaña
+      setLastShownMap(readLastShown());
+    },
   }));
 
-  // Filtrar alertas que no han sido cerradas
-  const visibleAlerts = alerts.filter(alert => {
-    const isDismissed = dismissedAlerts.includes(alert.categoryId);
-    console.log(`🔍 Alerta ${alert.categoryName} (ID: ${alert.categoryId}): ${isDismissed ? 'Cerrada' : 'Visible'}`);
-    return !isDismissed;
+  const isoLocal = todayISO();
+  const isoUTC = new Date().toISOString().slice(0, 10);
+
+  const visibleAlerts: AlertItem[] = (alerts || []).filter((a: AlertItem) => {
+    const id = a.categoryId;
+    const isDismissed = dismissedAlerts.includes(id);
+    const isHiddenToday = lastShownMap[id] === isoLocal || lastShownMap[id] === isoUTC;
+    if (isDismissed) return false;
+    if (isHiddenToday && !showHiddenOverride) return false;
+    return true;
   });
 
   const dismissAlert = (categoryId: string) => {
-    console.log('❌ Cerrando alerta:', categoryId);
-    setDismissedAlerts(prev => {
-      const newDismissed = [...prev, categoryId];
-      console.log('📝 Alertas cerradas actualizadas:', newDismissed);
-      return newDismissed;
+    // asegurar que "Cerrar" sea solo temporal: quitar cualquier marca persistente si existe
+    try {
+      const map = readLastShown();
+      if (map && map[categoryId]) {
+        delete map[categoryId];
+        writeLastShown(map);
+        // actualizar el estado local para reflejar el cambio inmediatamente
+        setLastShownMap(map);
+      }
+    } catch (err) {
+      // noop
+    }
+    // ocultar en esta sesión
+    setDismissedAlerts((s) => {
+      if (s.includes(categoryId)) return s;
+      return [...s, categoryId];
     });
   };
 
-  console.log('📊 Estado actual:', {
-    totalAlerts: alerts.length,
-    dismissedCount: dismissedAlerts.length,
-    visibleCount: visibleAlerts.length,
-    loading,
-    alertsVersion
-  });
+  const dismissForToday = (categoryId: string) => {
+    const iso = todayISO();
+    const last = { ...readLastShown(), [categoryId]: iso };
+    writeLastShown(last);
+    setLastShownMap(last);
+    setDismissedAlerts((s) => ([...s, categoryId]));
+  };
 
-  if (loading) {
-    console.log('⏳ Cargando alertas...');
-    return null;
-  }
-
-  if (visibleAlerts.length === 0) {
-    console.log('👀 No hay alertas visibles para mostrar');
-    return null;
-  }
-
-  console.log('✅ Mostrando', visibleAlerts.length, 'alertas');
+  if (loading) return null;
+  if (!visibleAlerts.length) return null;
 
   return (
-    <div
-      className="spending-alerts-container"
-      style={{
-        position: 'fixed', 
-        top: '20px', 
-        right: '20px', 
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px'
-      }}
-    >
-      {visibleAlerts.map((alert) => (
-        <div
-          key={`${alert.categoryId}-${alertsVersion}`} // Key único con versión
-          style={{
-            maxWidth: '350px',
-            backgroundColor: alert.percentage >= 100 ? '#dc3545' : '#ffc107',
-            color: alert.percentage >= 100 ? '#fff' : '#000',
-            padding: '16px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-            border: '2px solid ' + (alert.percentage >= 100 ? '#a71e2a' : '#e0a800'),
-            position: 'relative'
-          }}
-        >
-          {/* Botón de cerrar */}
-          <button
-            onClick={() => dismissAlert(alert.categoryId)}
-            style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              background: 'rgba(0,0,0,0.1)',
-              border: 'none',
-              borderRadius: '50%',
-              width: '24px',
-              height: '24px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              color: alert.percentage >= 100 ? '#fff' : '#000',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.1)';
-            }}
-            title="Cerrar notificación"
-          >
-            ×
-          </button>
+    <div className="spending-alerts-container" style={containerStyle}>
+      {visibleAlerts.map((alert: AlertItem) => {
+        const isCritical = (alert?.percentage ?? 0) >= 100;
+        return (
+          <div key={`${alert.categoryId}-${alertsVersion}`} style={cardStyle(isCritical)}>
+            <button
+              onClick={() => dismissAlert(alert.categoryId)}
+              style={closeBtnStyle(isCritical)}
+              title="Cerrar"
+              aria-label={`Cerrar alerta ${alert.categoryName}`}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 28px rgba(0,0,0,0.22)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ''; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 18px rgba(0,0,0,0.18)'; }}
+            >
+              Cerrar
+            </button>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', paddingRight: '20px' }}>
-            <div style={{ fontSize: '24px', marginTop: '2px' }}>
-              {alert.percentage >= 100 ? '🚫' : '⚠️'}
-            </div>
-            <div>
-              <h3 style={{ 
-                margin: '0 0 8px 0', 
-                fontSize: '16px', 
-                fontWeight: 'bold' 
-              }}>
-                {alert.percentage >= 100 ? '¡Límite Superado!' : '¡Cerca del Límite!'}
-              </h3>
-              <div style={{ fontSize: '14px', lineHeight: '1.4' }}>
-                <p style={{ margin: '4px 0', fontWeight: 'bold' }}>
-                  📊 {alert.categoryName}
-                </p>
-                <p style={{ margin: '4px 0' }}>
-                  💰 Gastado: Q{alert.currentSpent.toFixed(2)} / Q{alert.limit.toFixed(2)}
-                </p>
-                <p style={{ margin: '4px 0', fontWeight: 'bold' }}>
-                  📈 {alert.percentage.toFixed(0)}% del límite mensual
-                </p>
+            <button
+              onClick={() => dismissForToday(alert.categoryId)}
+              style={pillStyle}
+              title="No mostrar hoy"
+              aria-label={`No mostrar hoy ${alert.categoryName}`}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 28px rgba(0,0,0,0.24)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ''; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 20px rgba(0,0,0,0.28)'; }}
+            >
+              No mostrar hoy
+            </button>
+
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div style={{ fontSize: 22, marginTop: 2 }}>{isCritical ? '🚫' : '⚠️'}</div>
+
+              <div style={{ flex: 1 }}>
+                <h3 style={titleStyle}>{isCritical ? '¡Límite Superado!' : '¡Cerca del Límite!'}</h3>
+
+                <div style={metaStyle}>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>{alert.categoryName}</div>
+                  <div>💰 Gastado: Q{(alert.currentSpent ?? 0).toFixed(2)} / Q{(alert.limit ?? 0).toFixed(2)}</div>
+                  <div style={{ fontWeight: 700, marginTop: 6 }}>{Math.round(alert.percentage ?? 0)}% del límite mensual</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 });
@@ -166,4 +240,6 @@ const SpendingAlerts = forwardRef<SpendingAlertsRef>((props, ref) => {
 SpendingAlerts.displayName = 'SpendingAlerts';
 
 export default SpendingAlerts;
-export type { SpendingAlertsRef };
+export type {
+  SpendingAlertsRef,
+};
