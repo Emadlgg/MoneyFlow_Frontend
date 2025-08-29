@@ -1,31 +1,32 @@
-import React, { useEffect, useState } from 'react'
+import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
-} from 'react-router-dom'
+} from "react-router-dom";
+import Notifications from "./pages/Notifications";
 
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { AccountProvider } from './contexts/AccountContext'
-import { SelectedAccountProvider } from './contexts/SelectedAccountContext'
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { AccountProvider } from "./contexts/AccountContext";
+import { SelectedAccountProvider } from "./contexts/SelectedAccountContext";
 
-import Sidebar from './components/layout/Sidebar'
-import SpendingAlerts from './components/SpendingAlerts'
+import Sidebar from "./components/layout/Sidebar";
+import SpendingAlerts from "./components/SpendingAlerts";
 
-import ProfilePage from './pages/Profile'
-import AccountsPage from './pages/Accounts'
-import IncomesPage from './pages/Incomes'
-import ExpensesPage from './pages/Expenses'
-import ReportsPage from './pages/Reports'
-import HomePage from './pages/Home'
-import Login from './components/Auth/LoginForm'
-import Register from './components/Auth/RegisterForm'
+import ProfilePage from "./pages/Profile";
+import AccountsPage from "./pages/Accounts";
+import IncomesPage from "./pages/Incomes";
+import ExpensesPage from "./pages/Expenses";
+import ReportsPage from "./pages/Reports";
+import HomePage from "./pages/Home";
+import Login from "./components/Auth/LoginForm";
+import Register from "./components/Auth/RegisterForm";
 
-import './assets/style/layout.css'
+import "./assets/style/layout.css";
 
 function AppContent() {
-  const { user, loading } = useAuth()
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -35,7 +36,7 @@ function AppContent() {
           <p>Cargando...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (!user) {
@@ -48,7 +49,7 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </Router>
-    )
+    );
   }
 
   return (
@@ -65,6 +66,7 @@ function AppContent() {
                 <Route path="/expenses" element={<ExpensesPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/notifications" element={<Notifications />} />
                 <Route path="*" element={<Navigate to="/incomes" replace />} />
               </Routes>
             </main>
@@ -73,7 +75,7 @@ function AppContent() {
         </Router>
       </SelectedAccountProvider>
     </AccountProvider>
-  )
+  );
 }
 
 export default function App() {
@@ -81,5 +83,5 @@ export default function App() {
     <AuthProvider>
       <AppContent />
     </AuthProvider>
-  )
+  );
 }

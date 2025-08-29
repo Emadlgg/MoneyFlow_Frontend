@@ -107,6 +107,9 @@ export default function Sidebar() {
         >
           👤 Perfil
         </Link>
+        <Link to="/notifications" className="sidebar__nav-link">
+          🔔 Notificaciones
+        </Link>
       </nav>
 
       <button 
