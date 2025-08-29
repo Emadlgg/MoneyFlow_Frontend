@@ -21,9 +21,9 @@ const MONTH_NAMES = [
 
 const defaultPrefs: Preferences = {
   taxes: [
+    { id: "isr", label: "ISR (impuesto sobre la renta)", enabled: false },
     { id: "iusi", label: "IUSI (predial)", enabled: false },
-    { id: "calcomania", label: "Calcomanía de carro", enabled: false },
-    { id: "circulacion", label: "Placa / circulación", enabled: false },
+    { id: "circulacion", label: "Impuesto sobre circulación", enabled: false },
   ],
   lowBalance: { enabled: false, threshold: 100 },
   largeTransaction: { enabled: false, threshold: 1000 },
@@ -261,19 +261,28 @@ export default function Notifications(): JSX.Element {
     };
   }, [dueAlerts.length]);
 
-  // UI helpers
-  const DayOptions = ({ value, onChange }: { value?: number; onChange: (d?: number) => void }) => (
-    <select value={value ?? ""} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}>
-      <option value="">Día</option>
-      {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}</option>)}
-    </select>
-  );
-  const MonthOptions = ({ value, onChange }: { value?: number; onChange: (m?: number) => void }) => (
-    <select value={value ?? ""} onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}>
-      <option value="">Mes</option>
-      {MONTH_NAMES.map((name, idx) => <option key={idx} value={idx + 1}>{name}</option>)}
-    </select>
-  );
+  // UI helpers (reemplazados): input date que guarda solo día/mes (año actual usado para el picker)
+  const DatePicker = ({ valueDay, valueMonth, onChange }: { valueDay?: number; valueMonth?: number; onChange: (d?: number, m?: number) => void }) => {
+    const year = new Date().getFullYear();
+    const value = valueDay && valueMonth ? `${year}-${String(valueMonth).padStart(2, "0")}-${String(valueDay).padStart(2, "0")}` : "";
+    return (
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (!v) {
+            onChange(undefined, undefined);
+            return;
+          }
+          const [y, mo, da] = v.split("-").map((s) => Number(s));
+          // guardamos solo día/mes
+          onChange(Number(da), Number(mo));
+        }}
+        style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #333", background: "#0b0b0b", color: "#fff" }}
+      />
+    );
+  };
 
   // estilos alertas
   const alertContainerStyle: React.CSSProperties = {
@@ -319,14 +328,14 @@ export default function Notifications(): JSX.Element {
                   setPrefs((p) => ({ ...p, taxes: p.taxes.map((x, ix) => ix === i ? { ...x, enabled: !x.enabled } : x) }));
                   setSaved(false);
                 }} />
-                <DayOptions value={t.dueDay ? Number(t.dueDay) : undefined} onChange={(d) => {
-                  setPrefs((p) => ({ ...p, taxes: p.taxes.map((x, ix) => ix === i ? { ...x, dueDay: d } : x) }));
-                  setSaved(false);
-                }} />
-                <MonthOptions value={t.dueMonth ? Number(t.dueMonth) : undefined} onChange={(m) => {
-                  setPrefs((p) => ({ ...p, taxes: p.taxes.map((x, ix) => ix === i ? { ...x, dueMonth: m } : x) }));
-                  setSaved(false);
-                }} />
+                <DatePicker
+                  valueDay={t.dueDay ? Number(t.dueDay) : undefined}
+                  valueMonth={t.dueMonth ? Number(t.dueMonth) : undefined}
+                  onChange={(d, m) => {
+                    setPrefs((p) => ({ ...p, taxes: p.taxes.map((x, ix) => ix === i ? { ...x, dueDay: d, dueMonth: m } : x) }));
+                    setSaved(false);
+                  }}
+                />
                 <button className="btn-ghost" onClick={() => {
                   // prueba toast simple
                   try {
