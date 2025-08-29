@@ -315,7 +315,7 @@ export default function Notifications(): JSX.Element {
     );
   };
 
-  // estilos alertas
+  // estilos alertas (ajustados para igualar SpendingAlerts)
   const alertContainerStyle: React.CSSProperties = {
     position: "fixed",
     top: alertTopOffset,
@@ -323,19 +323,60 @@ export default function Notifications(): JSX.Element {
     zIndex: 9999,
     display: "flex",
     flexDirection: "column",
-    gap: 12,
-    alignItems: "flex-end"
+    gap: 10,
   };
+
   const alertCardStyle = (isCritical: boolean): React.CSSProperties => ({
-    maxWidth: 380,
-    background: isCritical ? "#dc3545" : "#ffd95a",
-    color: isCritical ? "#fff" : "#111",
-    padding: 12,
-    borderRadius: 10,
-    boxShadow: "0 6px 18px rgba(0,0,0,0.25)",
-    border: `2px solid ${isCritical ? "#a71e2a" : "#e0a800"}`,
-    position: "relative",
+    maxWidth: 350,
+    background: isCritical ? '#dc3545' : '#ffd95a',
+    color: isCritical ? '#fff' : '#111',
+    padding: 14,
+    paddingRight: 140, // espacio para botones a la derecha (coincide con SpendingAlerts)
+    borderRadius: 8,
+    boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
+    border: `2px solid ${isCritical ? '#a71e2a' : '#e0a800'}`,
+    position: 'relative',
   });
+
+  const closeBtnStyle = (isCritical: boolean): React.CSSProperties => ({
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    background: isCritical ? 'rgba(15,23,36,0.9)' : 'rgba(15,23,36,0.85)',
+    color: '#FFD95A',
+    border: '1px solid rgba(255,255,255,0.04)',
+    borderRadius: 8,
+    padding: '6px 10px',
+    minWidth: 64,
+    height: 32,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 13,
+    fontWeight: 700,
+    boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
+  });
+
+  const pillStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 46,
+    right: 12,
+    minWidth: 96,
+    padding: '6px 10px',
+    borderRadius: 8,
+    background: 'rgba(255,255,255,0.06)',
+    color: '#0f1724',
+    border: '1px solid rgba(255,255,255,0.06)',
+    boxShadow: '0 8px 20px rgba(0,0,0,0.28)',
+    cursor: 'pointer',
+    fontWeight: 700,
+    fontSize: 13,
+    textAlign: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  };
 
   return (
     <div className="notifications-page">
@@ -397,80 +438,47 @@ export default function Notifications(): JSX.Element {
 
       {/* Contenedor de alertas de impuestos (apiladas sin solaparse con SpendingAlerts) */}
       <div style={alertContainerStyle}>
-        {dueAlerts.map((a) => {
-          const key = a.id ?? "";
+        {dueAlerts.map((a, idx) => {
+          const key = a.id ?? `${idx}`;
           const isCritical = false;
           return (
             <div key={key} style={alertCardStyle(isCritical)}>
-              {/* botones apilados a la derecha; paddingRight en contenido evita solapamiento */}
-              <div
-                style={{
-                  position: "absolute",
-                  top: 14,
-                  right: 14,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                  alignItems: "center",
-                }}
+              <button
+                onClick={() => closeTempAlert(key)}
+                style={closeBtnStyle(isCritical)}
+                title="Cerrar"
+                aria-label={`Cerrar notificación ${a.label}`}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 28px rgba(0,0,0,0.22)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ''; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 18px rgba(0,0,0,0.18)'; }}
               >
-                <button
-                  onClick={() => closeTempAlert(key)}
-                  aria-label={`Cerrar notificación ${a.label}`}
-                  title="Cerrar (temporal)"
-                  style={{
-                    minWidth: 110,
-                    padding: "8px 12px",
-                    borderRadius: 10,
-                    background: "rgba(255,255,255,0.92)", // claro para buen contraste
-                    color: "#0f1724",
-                    border: "1px solid rgba(15,23,36,0.08)",
-                    boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
-                    cursor: "pointer",
-                    fontWeight: 700,
-                    transition: "transform 120ms ease, box-shadow 120ms ease",
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 12px 28px rgba(0,0,0,0.16)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ""; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 18px rgba(0,0,0,0.12)"; }}
-                >
-                  Cerrar
-                </button>
+                Cerrar
+              </button>
 
-                <button
-                  onClick={() => dismissForToday(key)}
-                  aria-label={`No mostrar hoy ${a.label}`}
-                  title="No mostrar hoy (persistente)"
-                  style={{
-                    minWidth: 110,
-                    padding: "8px 12px",
-                    borderRadius: 10,
-                    background: "#0f1724", // botón primario oscuro
-                    color: "#FFD95A", // acento amarillo
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    boxShadow: "0 10px 26px rgba(15,23,36,0.28)",
-                    cursor: "pointer",
-                    fontWeight: 800,
-                    transition: "transform 120ms ease, box-shadow 120ms ease",
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 18px 40px rgba(15,23,36,0.34)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ""; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 10px 26px rgba(15,23,36,0.28)"; }}
-                >
-                  No mostrar hoy
-                </button>
-              </div>
-               <div style={{ display: "flex", gap: 12 }}>
-                <div style={{ fontSize: 20, marginTop: 2 }}>⚠️</div>
-                <div style={{ flex: 1, paddingRight: 140 }}> {/* espacio para los botones a la derecha */}
-                   <div style={{ fontWeight: 800, marginBottom: 6 }}>{a.label}</div>
-                   <div style={{ fontSize: 13 }}>
-                     Hoy es {(a.dueDay ?? "?")} de {MONTH_NAMES[((Number(a.dueMonth ?? 1)) - 1) ?? 0]}. Pulsa 'Cerrar' para ocultar (temporal) o 'No mostrar hoy' para persistir.
-                   </div>
+              <button
+                onClick={() => dismissForToday(key)}
+                style={pillStyle}
+                title="No mostrar hoy"
+                aria-label={`No mostrar hoy ${a.label}`}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 28px rgba(0,0,0,0.24)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ''; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 20px rgba(0,0,0,0.28)'; }}
+              >
+                No mostrar hoy
+              </button>
+
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <div style={{ fontSize: 22, marginTop: 2 }}>{isCritical ? '🚫' : '⚠️'}</div>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 8px 0', fontSize: 16, fontWeight: 800 }}>{isCritical ? '¡Vencido!' : '¡Recordatorio de impuesto!'}</h3>
+                  <div style={{ fontSize: 13, lineHeight: 1.4 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 6 }}>{a.label}</div>
+                    <div>Hoy es {(a.dueDay ?? '?')} de {MONTH_NAMES[((Number(a.dueMonth ?? 1)) - 1) ?? 0]}.</div>
+                  </div>
                 </div>
-               </div>
-             </div>
-           );
-         })}
-       </div>
-     </div>
-   );
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
