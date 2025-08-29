@@ -29,6 +29,35 @@ const defaultPrefs: Preferences = {
   largeTransaction: { enabled: false, threshold: 1000 },
 };
 
+// Normaliza/mezcla prefs cargadas con los impuestos por defecto
+function normalizePrefs(loaded: any): Preferences {
+  const loadedTaxes: any[] = Array.isArray(loaded?.taxes) ? loaded.taxes : [];
+  const defaultIds = defaultPrefs.taxes.map((t) => t.id);
+
+  // Partimos de los impuestos por defecto, sobrescribiendo enabled/dueDay/dueMonth si vienen en loaded
+  const merged = defaultPrefs.taxes.map((def) => {
+    const found = loadedTaxes.find((lt) => lt?.id === def.id);
+    return {
+      ...def,
+      // preserve user's enabled/dueDay/dueMonth if present
+      enabled: found?.enabled ?? def.enabled,
+      dueDay: found?.dueDay ?? found?.due_day ?? def.dueDay,
+      dueMonth: found?.dueMonth ?? found?.due_month ?? def.dueMonth,
+    };
+  });
+
+  // Añadir cualquier impuesto extra que estuviera en la DB pero no en defaults (opcional)
+  const extras = loadedTaxes.filter((lt) => lt?.id && !defaultIds.includes(lt.id))
+    .map((e) => ({ id: e.id, label: e.label ?? e.id, enabled: !!e.enabled, dueDay: e.dueDay ?? e.due_day, dueMonth: e.dueMonth ?? e.due_month }));
+
+  const result: Preferences = {
+    taxes: [...merged, ...extras],
+    lowBalance: { ...(defaultPrefs.lowBalance), ...(loaded?.lowBalance || {}) },
+    largeTransaction: { ...(defaultPrefs.largeTransaction), ...(loaded?.largeTransaction || {}) },
+  };
+  return result;
+}
+
 export default function Notifications(): JSX.Element {
   const [prefs, setPrefs] = useState<Preferences>(defaultPrefs);
   const [saved, setSaved] = useState(false);
@@ -109,7 +138,7 @@ export default function Notifications(): JSX.Element {
         if (res.ok) {
           const json = await res.json();
           if (mounted && json?.preferences) {
-            setPrefs(json.preferences);
+            setPrefs(normalizePrefs(json.preferences));
             return;
           }
         }
@@ -161,7 +190,9 @@ export default function Notifications(): JSX.Element {
 
   // Guardar prefs: guarda a localStorage y si hay token intenta guardar en backend
   const save = useCallback(async () => {
-    const toSave = JSON.parse(JSON.stringify(prefs));
+    // normalizar antes de guardar (asegura impuestos correctos y orden)
+    const toSave = normalizePrefs(prefs);
+
     // 1) guardar local inmediato
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -197,8 +228,8 @@ export default function Notifications(): JSX.Element {
 
       const json = await res.json();
       if (json?.preferences) {
-        setPrefs(json.preferences);
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(json.preferences)); } catch {}
+        setPrefs(normalizePrefs(json.preferences));
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizePrefs(json.preferences))); } catch {}
       }
 
       setSaved(true);
@@ -353,7 +384,7 @@ export default function Notifications(): JSX.Element {
         <div className="actions">
           <button data-testid="save-btn" className="btn-primary" onClick={save}>Guardar</button>
           <button data-testid="reset-btn" className="btn-secondary" onClick={() => {
-            setPrefs(defaultPrefs);
+            setPrefs(normalizePrefs(defaultPrefs));
             try { localStorage.removeItem(STORAGE_KEY); } catch {}
             setSaved(false);
           }}>Reset</button>
@@ -371,24 +402,75 @@ export default function Notifications(): JSX.Element {
           const isCritical = false;
           return (
             <div key={key} style={alertCardStyle(isCritical)}>
-              <div style={{ position: "absolute", top: 8, right: 8 }}>
-                <button onClick={() => closeTempAlert(key)} title="Cerrar" style={{ marginRight: 6 }}>Cerrar</button>
-                <button onClick={() => dismissForToday(key)} title="No mostrar hoy" style={{ background: "#111827", color: "#fff", border: "none", borderRadius: 6, padding: "6px 8px" }}>No mostrar hoy</button>
-              </div>
+              {/* botones apilados a la derecha; paddingRight en contenido evita solapamiento */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 14,
+                  right: 14,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 10,
+                  alignItems: "center",
+                }}
+              >
+                <button
+                  onClick={() => closeTempAlert(key)}
+                  aria-label={`Cerrar notificación ${a.label}`}
+                  title="Cerrar (temporal)"
+                  style={{
+                    minWidth: 110,
+                    padding: "8px 12px",
+                    borderRadius: 10,
+                    background: "rgba(255,255,255,0.92)", // claro para buen contraste
+                    color: "#0f1724",
+                    border: "1px solid rgba(15,23,36,0.08)",
+                    boxShadow: "0 6px 18px rgba(0,0,0,0.12)",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    transition: "transform 120ms ease, box-shadow 120ms ease",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 12px 28px rgba(0,0,0,0.16)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ""; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 18px rgba(0,0,0,0.12)"; }}
+                >
+                  Cerrar
+                </button>
 
-              <div style={{ display: "flex", gap: 12 }}>
-                <div style={{ fontSize: 20, marginTop: 2 }}>⚠️</div>
-                <div>
-                  <div style={{ fontWeight: 800, marginBottom: 6 }}>{a.label}</div>
-                  <div style={{ fontSize: 13 }}>
-                    Hoy es {(a.dueDay ?? "?")} de {MONTH_NAMES[((Number(a.dueMonth ?? 1)) - 1) ?? 0]}. Pulsa 'Cerrar' para ocultar (temporal) o 'No mostrar hoy' para persistir.
-                  </div>
-                </div>
+                <button
+                  onClick={() => dismissForToday(key)}
+                  aria-label={`No mostrar hoy ${a.label}`}
+                  title="No mostrar hoy (persistente)"
+                  style={{
+                    minWidth: 110,
+                    padding: "8px 12px",
+                    borderRadius: 10,
+                    background: "#0f1724", // botón primario oscuro
+                    color: "#FFD95A", // acento amarillo
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    boxShadow: "0 10px 26px rgba(15,23,36,0.28)",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    transition: "transform 120ms ease, box-shadow 120ms ease",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 18px 40px rgba(15,23,36,0.34)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.transform = ""; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 10px 26px rgba(15,23,36,0.28)"; }}
+                >
+                  No mostrar hoy
+                </button>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+               <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ fontSize: 20, marginTop: 2 }}>⚠️</div>
+                <div style={{ flex: 1, paddingRight: 140 }}> {/* espacio para los botones a la derecha */}
+                   <div style={{ fontWeight: 800, marginBottom: 6 }}>{a.label}</div>
+                   <div style={{ fontSize: 13 }}>
+                     Hoy es {(a.dueDay ?? "?")} de {MONTH_NAMES[((Number(a.dueMonth ?? 1)) - 1) ?? 0]}. Pulsa 'Cerrar' para ocultar (temporal) o 'No mostrar hoy' para persistir.
+                   </div>
+                </div>
+               </div>
+             </div>
+           );
+         })}
+       </div>
+     </div>
+   );
 }
