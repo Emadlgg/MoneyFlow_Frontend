@@ -28,13 +28,14 @@ const containerStyle: React.CSSProperties = {
 
 const cardStyle = (isCritical: boolean): React.CSSProperties => ({
   maxWidth: 350,
-  background: isCritical ? '#dc3545' : '#ffd95a',
-  color: isCritical ? '#fff' : '#111',
+  // tarjeta fría para SpendingAlerts: azul oscuro / rojo crítico
+  background: isCritical ? '#6b0f0f' : '#071033',
+  color: isCritical ? '#fff' : '#cfeffd',
   padding: 14,
-  paddingRight: 140, // espacio para botones en la derecha
+  paddingRight: 140,
   borderRadius: 8,
-  boxShadow: '0 8px 28px rgba(0,0,0,0.35)',
-  border: `2px solid ${isCritical ? '#a71e2a' : '#e0a800'}`,
+  boxShadow: '0 8px 28px rgba(2,6,23,0.6)', // sombra más fría/oscura
+  border: `2px solid ${isCritical ? '#a72323' : '#0b4b78'}`,
   position: 'relative',
 });
 
@@ -42,9 +43,10 @@ const closeBtnStyle = (isCritical: boolean): React.CSSProperties => ({
   position: 'absolute',
   top: 10,
   right: 12,
-  background: isCritical ? 'rgba(15,23,36,0.9)' : 'rgba(15,23,36,0.85)',
-  color: '#FFD95A',
-  border: '1px solid rgba(255,255,255,0.04)',
+  // botón "Cerrar" pequeño, oscuro pero con texto/acento frío
+  background: isCritical ? 'rgba(0,0,0,0.5)' : 'rgba(2,8,20,0.7)',
+  color: isCritical ? '#ffdddd' : '#9fe7ff',
+  border: '1px solid rgba(255,255,255,0.03)',
   borderRadius: 8,
   padding: '6px 10px',
   minWidth: 64,
@@ -55,7 +57,7 @@ const closeBtnStyle = (isCritical: boolean): React.CSSProperties => ({
   justifyContent: 'center',
   fontSize: 13,
   fontWeight: 700,
-  boxShadow: '0 6px 18px rgba(0,0,0,0.18)',
+  boxShadow: '0 6px 18px rgba(0,0,0,0.28)',
 });
 
 const pillStyle: React.CSSProperties = {
@@ -65,10 +67,11 @@ const pillStyle: React.CSSProperties = {
   minWidth: 96,
   padding: '6px 10px',
   borderRadius: 8,
-  background: 'rgba(255,255,255,0.06)',
-  color: '#0f1724',
-  border: '1px solid rgba(255,255,255,0.06)',
-  boxShadow: '0 8px 20px rgba(0,0,0,0.28)',
+  // pill con acento frío
+  background: 'rgba(6,32,58,0.9)',
+  color: '#bff1ff',
+  border: '1px solid rgba(16,88,132,0.16)',
+  boxShadow: '0 8px 20px rgba(0,0,0,0.36)',
   cursor: 'pointer',
   fontWeight: 700,
   fontSize: 13,
