@@ -31,24 +31,48 @@ const defaultPrefs: Preferences = {
 
 // Normaliza/mezcla prefs cargadas con los impuestos por defecto
 function normalizePrefs(loaded: any): Preferences {
-  const loadedTaxes: any[] = Array.isArray(loaded?.taxes) ? loaded.taxes : [];
+  const loadedTaxesRaw: any[] = Array.isArray(loaded?.taxes) ? loaded.taxes : [];
+
+  // Mapeo de IDs legacy -> ID actual (migramos valores antiguos hacia el impuesto correcto)
+  const legacyMap: Record<string, string> = {
+    "calcomania": "circulacion",
+    "calcomania_carro": "circulacion",
+    "calcomania_de_carro": "circulacion",
+    // agrega otros legacy si hace falta
+  };
+
+  // Normalizar ids y consolidar entradas cargadas (si múltiples legacy apuntan al mismo objetivo)
+  const loadedById: Record<string, any> = {};
+  for (const item of loadedTaxesRaw) {
+    if (!item || !item.id) continue;
+    const targetId = legacyMap[item.id] ?? item.id;
+    // merge para no perder enabled/dueDay/dueMonth; later entries override
+    loadedById[targetId] = { ...(loadedById[targetId] || {}), ...item, id: targetId };
+  }
+
   const defaultIds = defaultPrefs.taxes.map((t) => t.id);
 
   // Partimos de los impuestos por defecto, sobrescribiendo enabled/dueDay/dueMonth si vienen en loaded
   const merged = defaultPrefs.taxes.map((def) => {
-    const found = loadedTaxes.find((lt) => lt?.id === def.id);
+    const found = loadedById[def.id];
     return {
       ...def,
-      // preserve user's enabled/dueDay/dueMonth if present
       enabled: found?.enabled ?? def.enabled,
       dueDay: found?.dueDay ?? found?.due_day ?? def.dueDay,
       dueMonth: found?.dueMonth ?? found?.due_month ?? def.dueMonth,
     };
   });
 
-  // Añadir cualquier impuesto extra que estuviera en la DB pero no en defaults (opcional)
-  const extras = loadedTaxes.filter((lt) => lt?.id && !defaultIds.includes(lt.id))
-    .map((e) => ({ id: e.id, label: e.label ?? e.id, enabled: !!e.enabled, dueDay: e.dueDay ?? e.due_day, dueMonth: e.dueMonth ?? e.due_month }));
+  // Añadir extras: solo aquellos que no colisionan con defaults y que no son entries legacy mapeadas
+  const extras = Object.values(loadedById)
+    .filter((e: any) => e?.id && !defaultIds.includes(e.id))
+    .map((e: any) => ({
+      id: e.id,
+      label: e.label ?? e.id,
+      enabled: !!e.enabled,
+      dueDay: e.dueDay ?? e.due_day,
+      dueMonth: e.dueMonth ?? e.due_month,
+    }));
 
   const result: Preferences = {
     taxes: [...merged, ...extras],
