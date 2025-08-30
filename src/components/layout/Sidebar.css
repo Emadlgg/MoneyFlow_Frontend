@@ -14,6 +14,56 @@
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
 }
 
+/* Custom dark-themed scrollbar para el sidebar (WebKit + Firefox) */
+.sidebar {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #7c3aed33 transparent; /* thumb, track */
+}
+
+/* WebKit (Chrome, Edge, Safari) */
+.sidebar::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+  border-left: 1px solid rgba(255,255,255,0.02);
+  border-radius: 12px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #8b5cf6, #6d28d9); /* púrpura -> violeta */
+  border-radius: 12px;
+  border: 2px solid rgba(0,0,0,0.36);
+  min-height: 32px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #a78bfa, #7c3aed);
+  transform: translateZ(0);
+}
+
+/* esquina del scrollbar */
+.sidebar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Opcional: aplicar un track (más visible en fondos muy oscuros) para listas internas */
+.sidebar__accounts .sidebar__list,
+.sidebar__nav {
+  /* asegúrate que los contenedores puedan hacer scroll si es necesario */
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  padding-right: 6px; /* dejar espacio para el scrollbar sin solapar contenido */
+}
+
+/* Mejora de foco/accesibilidad: outline suave cuando se interactúa con el thumb (no en todos los navegadores) */
+.sidebar:focus-within::-webkit-scrollbar-thumb {
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+}
+
 .sidebar__header {
   display: flex;
   align-items: center;
