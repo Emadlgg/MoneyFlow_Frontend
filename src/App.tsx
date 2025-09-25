@@ -6,6 +6,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import Notifications from "./pages/Notifications";
+import FinancialTips from "./pages/FinancialTips"; // ← ✅ AGREGAR ESTE IMPORT
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AccountProvider } from "./contexts/AccountContext";
@@ -67,6 +68,7 @@ function AppContent() {
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/notifications" element={<Notifications />} />
+                <Route path="/tips" element={<FinancialTips />} /> {/* ← ✅ AGREGAR ESTA RUTA */}
                 <Route path="*" element={<Navigate to="/incomes" replace />} />
               </Routes>
             </main>

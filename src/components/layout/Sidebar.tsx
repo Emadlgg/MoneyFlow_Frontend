@@ -110,6 +110,12 @@ export default function Sidebar() {
         <Link to="/notifications" className="sidebar__nav-link">
           🔔 Notificaciones
         </Link>
+        <Link 
+          to="/tips" 
+          className={`sidebar__nav-link ${isActive('/tips') ? 'sidebar__nav-link--active' : ''}`}
+        >
+          💡 Consejos
+        </Link>
       </nav>
 
       <button 
