@@ -33,9 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Si el usuario se autentica exitosamente (incluye OAuth)
         if (event === 'SIGNED_IN' && session?.user) {
-          // Solo redirigir si estamos en una página de auth
+          // Solo redirigir si estamos en una página de auth, no desde home
           const currentPath = window.location.pathname
-          if (currentPath === '/login' || currentPath === '/register' || currentPath === '/') {
+          if (currentPath === '/login' || currentPath === '/register') {
             window.location.href = '/incomes'
           }
         }
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   )

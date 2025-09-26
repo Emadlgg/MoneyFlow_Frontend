@@ -1,4 +1,3 @@
-import React from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -6,7 +5,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import Notifications from "./pages/Notifications";
-import FinancialTips from "./pages/FinancialTips"; // ← ✅ AGREGAR ESTE IMPORT
+import FinancialTips from "./pages/FinancialTips";
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AccountProvider } from "./contexts/AccountContext";
@@ -40,19 +39,22 @@ function AppContent() {
     );
   }
 
+  // Si no hay usuario, mostrar rutas públicas
   if (!user) {
     return (
       <Router>
         <Routes>
+          <Route path="/" element={<HomePage />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     );
   }
 
+  // Si hay usuario, mostrar aplicación completa
   return (
     <AccountProvider>
       <SelectedAccountProvider>
@@ -62,13 +64,14 @@ function AppContent() {
             <main className="app-layout__content">
               <Routes>
                 <Route path="/" element={<Navigate to="/incomes" replace />} />
+                <Route path="/home" element={<Navigate to="/incomes" replace />} />
                 <Route path="/accounts" element={<AccountsPage />} />
                 <Route path="/incomes" element={<IncomesPage />} />
                 <Route path="/expenses" element={<ExpensesPage />} />
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/notifications" element={<Notifications />} />
-                <Route path="/tips" element={<FinancialTips />} /> {/* ← ✅ AGREGAR ESTA RUTA */}
+                <Route path="/tips" element={<FinancialTips />} />
                 <Route path="*" element={<Navigate to="/incomes" replace />} />
               </Routes>
             </main>
