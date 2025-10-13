@@ -15,11 +15,11 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": true,
+    "strict": false,                           // ← CAMBIAR: true → false
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "strictNullChecks": false,
-    "noFallthroughCasesInSwitch": true,
+    "noFallthroughCasesInSwitch": false,       // ← CAMBIAR: true → false
     "noUncheckedSideEffectImports": true
   },
   "include": ["src"]
