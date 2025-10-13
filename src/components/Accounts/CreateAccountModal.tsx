@@ -4,10 +4,10 @@ import { useAccount } from '../../contexts/AccountContext'
 interface CreateAccountModalProps {
   isOpen: boolean
   onClose: () => void
+  onCreateAccount: (name: string, type: string, balance: number) => Promise<void> // ✅ Agregar esta línea
 }
 
-export default function CreateAccountModal({ isOpen, onClose }: CreateAccountModalProps) {
-  const { createAccount } = useAccount() // Usar el contexto
+export default function CreateAccountModal({ isOpen, onClose, onCreateAccount }: CreateAccountModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     type: 'checking',
@@ -35,7 +35,7 @@ export default function CreateAccountModal({ isOpen, onClose }: CreateAccountMod
 
     setIsLoading(true)
     try {
-      await createAccount(formData.name.trim(), formData.type, formData.balance) // Llamar a la función del contexto
+      await onCreateAccount(formData.name.trim(), formData.type, formData.balance) // ✅ Usar la prop en lugar del contexto
       setFormData({ name: '', type: 'checking', balance: 0 })
       onClose()
     } catch (error: any) {

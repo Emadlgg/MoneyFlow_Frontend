@@ -9,14 +9,17 @@ import { useAccount } from '../contexts/AccountContext'
 import { useAuth }    from '../contexts/AuthContext'
 
 export function useTransactions() {
-  const { active: account } = useAccount()
-  const { user }            = useAuth()
+  const { active: account } = useAccount() // Esto ahora funciona con nuestros cambios
+  const { user } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [loading, setLoading]           = useState(false)
-  const [error, setError]               = useState<Error | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
 
   const fetchAll = useCallback(async () => {
-    if (!account) return
+    if (!account) {
+      setTransactions([]) // Limpiar transacciones si no hay cuenta activa
+      return
+    }
     setLoading(true)
     try {
       const data = await getTransactions(account.id)
@@ -36,18 +39,21 @@ export function useTransactions() {
   const add = useCallback(
     async (entry: {
       category: string
-      amount:   number
-      date:     string
+      amount: number
+      date: string
     }) => {
-      if (!account || !user) return
+      if (!account || !user) {
+        setError(new Error("No account selected or user not authenticated"))
+        return
+      }
       setLoading(true)
       try {
         await addTransaction({
-          user_id:    user.id,
+          user_id: user.id,
           account_id: account.id,
-          category:   entry.category,
-          amount:     entry.amount,
-          date:       entry.date,
+          category: entry.category,
+          amount: entry.amount,
+          date: entry.date,
         })
         await fetchAll()
       } catch (err) {

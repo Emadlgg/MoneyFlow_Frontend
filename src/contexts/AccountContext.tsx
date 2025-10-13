@@ -14,10 +14,11 @@ interface Account {
 interface AccountContextValue {
   accounts: Account[]
   refetch: () => void
-  isLoading: boolean
+  loading: boolean // Cambiado de isLoading a loading
   error: string | null
   createAccount: (name: string, type: string, balance: number) => Promise<void>
   deleteAccount: (accountId: string) => Promise<void>
+  active?: Account
 }
 
 const AccountContext = createContext<AccountContextValue | undefined>(undefined)
@@ -25,17 +26,18 @@ const AccountContext = createContext<AccountContextValue | undefined>(undefined)
 export const AccountProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth()
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [loading, setLoading] = useState(true) // Cambiado de isLoading a loading
   const [error, setError] = useState<string | null>(null)
+  const [activeAccount, setActiveAccount] = useState<Account | undefined>(undefined)
 
   const fetchAccounts = useCallback(async () => {
     if (!user) {
       setAccounts([])
-      setIsLoading(false)
+      setLoading(false)
       return
     }
 
-    setIsLoading(true)
+    setLoading(true)
     setError(null)
     try {
       const { data, error } = await supabase
@@ -45,14 +47,20 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
         .order('name', { ascending: true })
 
       if (error) throw error
-      setAccounts(data || [])
+      const accountsData = data || []
+      setAccounts(accountsData)
+      
+      // Si no hay cuenta activa y hay cuentas, establecer la primera como activa
+      if (!activeAccount && accountsData.length > 0) {
+        setActiveAccount(accountsData[0])
+      }
     } catch (err: any) {
       console.error("Error fetching accounts:", err)
       setError(err.message || 'Failed to fetch accounts')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
-  }, [user])
+  }, [user, activeAccount])
 
   useEffect(() => {
     fetchAccounts()
@@ -61,7 +69,6 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
   const createAccount = async (name: string, type: string, initialBalance: number) => {
     if (!user) throw new Error("User not authenticated");
 
-    // The RPC call is now simpler
     const { data, error } = await supabase.rpc('create_account_with_initial_transaction', {
       p_user_id: user.id,
       p_account_name: name,
@@ -74,7 +81,7 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
       throw error;
     }
     
-    await fetchAccounts(); // Changed from refetch()
+    await fetchAccounts();
     return data;
   };
 
@@ -86,16 +93,27 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
 
     if (error) throw error;
     
-    await fetchAccounts(); // Refresca la lista
+    // Si la cuenta eliminada era la activa, limpiar activeAccount
+    if (activeAccount?.id === accountId) {
+      setActiveAccount(undefined)
+    }
+    
+    await fetchAccounts();
   };
 
-  const value = {
+  // Función para establecer cuenta activa
+  const setActive = useCallback((account: Account) => {
+    setActiveAccount(account)
+  }, [])
+
+  const value: AccountContextValue = {
     accounts,
     refetch: fetchAccounts,
-    isLoading,
+    loading, // Cambiado de isLoading a loading
     error,
     createAccount,
-    deleteAccount
+    deleteAccount,
+    active: activeAccount,
   }
 
   return (

@@ -417,8 +417,9 @@ export default function Notifications(): JSX.Element {
             <label key={t.id} className="pref-row" style={{ alignItems: "center" }}>
               <div style={{ flex: 1 }}>
                 <div className="pref-title">{t.label}</div>
+                {/* SOLUCIÓN: Eliminar el ?? 0 ya que Number() nunca retorna null/undefined */}
                 <div style={{ fontSize: 12, color: "#666" }}>
-                  Vencimiento: {(!t.dueDay || !t.dueMonth) ? "No configurado" : `${t.dueDay} de ${MONTH_NAMES[(Number(t.dueMonth) - 1) ?? 0]} (cada año)`}
+                  Vencimiento: {(!t.dueDay || !t.dueMonth) ? "No configurado" : `${t.dueDay} de ${MONTH_NAMES[Number(t.dueMonth) - 1]} (cada año)`}
                 </div>
               </div>
 
@@ -498,7 +499,8 @@ export default function Notifications(): JSX.Element {
                   <h3 style={{ margin: '0 0 8px 0', fontSize: 16, fontWeight: 800 }}>{isCritical ? '¡Vencido!' : '¡Recordatorio de impuesto!'}</h3>
                   <div style={{ fontSize: 13, lineHeight: 1.4 }}>
                     <div style={{ fontWeight: 700, marginBottom: 6 }}>{a.label}</div>
-                    <div>Hoy es {(a.dueDay ?? '?')} de {MONTH_NAMES[((Number(a.dueMonth ?? 1)) - 1) ?? 0]}.</div>
+                    {/* SOLUCIÓN: Eliminar el ?? 0 ya que Number() nunca retorna null/undefined */}
+                    <div>Hoy es {(a.dueDay ?? '?')} de {MONTH_NAMES[Number(a.dueMonth ?? 1) - 1]}.</div>
                   </div>
                 </div>
               </div>
