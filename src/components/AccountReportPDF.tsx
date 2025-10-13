@@ -95,7 +95,7 @@ export function AccountReportPDF({
               <View
                 style={[
                   styles.tableRow,
-                  idx % 2 === 1 ? styles.tableRowAlt : null,
+                  idx % 2 === 1 ? styles.tableRowAlt : {}, // ✅ CAMBIADO: null por {}
                 ]}
                 key={idx}
               >

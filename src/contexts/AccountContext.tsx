@@ -14,12 +14,14 @@ interface Account {
 interface AccountContextValue {
   accounts: Account[]
   refetch: () => void
-  loading: boolean // Cambiado de isLoading a loading
+  loading: boolean
   error: string | null
   createAccount: (name: string, type: string, balance: number) => Promise<void>
   deleteAccount: (accountId: string) => Promise<void>
   active?: Account
+  setActive: (account: Account) => void 
 }
+
 
 const AccountContext = createContext<AccountContextValue | undefined>(undefined)
 
@@ -109,11 +111,12 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
   const value: AccountContextValue = {
     accounts,
     refetch: fetchAccounts,
-    loading, // Cambiado de isLoading a loading
+    loading,
     error,
     createAccount,
     deleteAccount,
     active: activeAccount,
+    setActive, // ✅ AGREGAR ESTO
   }
 
   return (

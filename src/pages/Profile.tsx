@@ -9,9 +9,8 @@ export default function ProfilePage() {
 
   const displayName = user?.displayName || user?.name || user?.email?.split?.('@')?.[0] || 'Usuario'
   const email = user?.email ?? ''
-  const uid = user?.id ?? user?.sub ?? user?.uid ?? ''
   const createdAt = (user?.createdAt || user?.created_at || user?.user_metadata?.created_at) ?? null
-  const lastLogin = (user?.lastLogin || user?.last_login || user?.user_metadata?.last_sign_in_at) ?? null
+  // const lastLogin = (user?.lastLogin || user?.last_login || user?.user_metadata?.last_sign_in_at) ?? null
 
   const [editing, setEditing] = useState(false)
   const [nameDraft, setNameDraft] = useState(displayName)
@@ -22,7 +21,7 @@ export default function ProfilePage() {
     if (!displayName) return 'U'
     return displayName
       .split(' ')
-      .map((s: string) => s[0]) 
+      .map((s: string) => s[0]) // ✅ TIPO AGREGADO
       .slice(0, 2)
       .join('')
       .toUpperCase()
@@ -58,7 +57,6 @@ export default function ProfilePage() {
     const combined = Object.assign({}, base, variants[variant] || variants.primary, s || {})
 
     return (
-      // eslint-disable-next-line react/jsx-props-no-spreading
       <button
         {...props}
         style={combined}
@@ -93,15 +91,16 @@ export default function ProfilePage() {
     if (ok) signOut?.()
   }
 
-  function copyId() {
-    try {
-      navigator.clipboard?.writeText(uid)
-      setMessage({ type: 'success', text: 'ID copiado al portapapeles.' })
-      setTimeout(() => setMessage(null), 2200)
-    } catch {
-      setMessage({ type: 'error', text: 'No se pudo copiar el ID.' })
-    }
-  }
+  // ❌ ELIMINADO: copyId no se usa
+  // function copyId() {
+  //   try {
+  //     navigator.clipboard?.writeText(uid)
+  //     setMessage({ type: 'success', text: 'ID copiado al portapapeles.' })
+  //     setTimeout(() => setMessage(null), 2200)
+  //   } catch {
+  //     setMessage({ type: 'error', text: 'No se pudo copiar el ID.' })
+  //   }
+  // }
 
   return (
     <div className="profile-page container mx-auto p-6 max-w-4xl">
@@ -213,4 +212,3 @@ export default function ProfilePage() {
     </div>
   )
 }
-//
