@@ -4,7 +4,7 @@ import CreateAccountModal from './CreateAccountModal'
 import './AccountManager.css'
 
 export default function AccountManager() {
-  const { accounts, isLoading, error, deleteAccount } = useAccount()
+  const { accounts, loading, error, deleteAccount, createAccount } = useAccount() // Cambiar isLoading por loading
   const [isCreateModalOpen, setCreateModalOpen] = useState(false)
 
   const handleDeleteAccount = async (accountId: string) => {
@@ -20,7 +20,17 @@ export default function AccountManager() {
     }
   };
 
-  if (isLoading) return <div>Cargando cuentas...</div>
+  const handleCreateAccount = async (name: string, type: string, balance: number) => {
+    try {
+      await createAccount(name, type, balance);
+      setCreateModalOpen(false);
+    } catch (err: any) {
+      console.error("Error creating account:", err);
+      alert(`Error al crear la cuenta: ${err.message}`);
+    }
+  };
+
+  if (loading) return <div>Cargando cuentas...</div> // Cambiar isLoading por loading
   if (error) return <div>Error: {error}</div>
 
   return (
@@ -55,6 +65,7 @@ export default function AccountManager() {
       <CreateAccountModal 
         isOpen={isCreateModalOpen}
         onClose={() => setCreateModalOpen(false)}
+        onCreateAccount={handleCreateAccount} // ✅ Agregar esta prop faltante
       />
     </div>
   )

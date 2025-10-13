@@ -9,7 +9,7 @@ import { useAccount } from '../contexts/AccountContext'
 import { useAuth }    from '../contexts/AuthContext'
 
 export function useTransactions() {
-  const { active: account } = useAccount() // Esto ahora funciona con nuestros cambios
+  const { active: account } = useAccount()
   const { user } = useAuth()
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(false)
@@ -17,12 +17,14 @@ export function useTransactions() {
 
   const fetchAll = useCallback(async () => {
     if (!account) {
-      setTransactions([]) // Limpiar transacciones si no hay cuenta activa
+      setTransactions([])
       return
     }
     setLoading(true)
     try {
-      const data = await getTransactions(account.id)
+      // Si getTransactions espera number, convertir account.id a número
+      const accountId = Number(account.id) // ✅ Convertir a número
+      const data = await getTransactions(accountId)
       setTransactions(data)
       setError(null)
     } catch (err) {
@@ -48,9 +50,11 @@ export function useTransactions() {
       }
       setLoading(true)
       try {
+        // Convertir account.id a número si es necesario
+        const accountId = Number(account.id) // ✅ Convertir a número
         await addTransaction({
           user_id: user.id,
-          account_id: account.id,
+          account_id: accountId, // ✅ Usar el número convertido
           category: entry.category,
           amount: entry.amount,
           date: entry.date,
