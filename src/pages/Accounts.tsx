@@ -2,9 +2,11 @@ import React, { useState } from 'react'
 import { useAccount } from '../contexts/AccountContext'
 import ConfirmDialog from '../components/UI/ConfirmDialog'
 import CreateAccountModal from '../components/Accounts/CreateAccountModal'
+import EditAccountModal from '../components/Accounts/EditAccountModal' 
 
 export default function AccountsPage() {
-  const { accounts, loading, createAccount, deleteAccount } = useAccount()
+  const { accounts, loading, createAccount, updateAccount, deleteAccount } = useAccount() 
+  
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean
     accountId: string | null
@@ -14,8 +16,32 @@ export default function AccountsPage() {
     accountId: null,
     accountName: ''
   })
+  
+  // ✅ AGREGAR estado para el modal de edición
+  const [editModal, setEditModal] = useState<{
+    isOpen: boolean
+    account: { id: string; name: string; type: string } | null
+  }>({
+    isOpen: false,
+    account: null
+  })
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // ✅ AGREGAR función para abrir modal de edición
+  const handleEditClick = (accountId: string, accountName: string, accountType: string) => {
+    setEditModal({
+      isOpen: true,
+      account: { id: accountId, name: accountName, type: accountType }
+    })
+  }
+
+  // ✅ AGREGAR función para manejar actualización
+  const handleUpdateAccount = async (accountId: string, name: string, type: string) => {
+    await updateAccount(accountId, name, type)
+    setEditModal({ isOpen: false, account: null })
+  }
 
   const handleDeleteClick = (accountId: string, accountName: string) => {
     setDeleteDialog({
@@ -98,10 +124,7 @@ export default function AccountsPage() {
                   className="account-card__button account-card__button--edit"
                   disabled={isDeleting}
                   type="button"
-                  onClick={() => {
-                    // Aquí puedes agregar la lógica de editar después
-                    console.log('Editar cuenta:', account.id)
-                  }}
+                  onClick={() => handleEditClick(account.id, account.name, account.type)} // ✅ CAMBIAR
                 >
                   Editar
                 </button>
@@ -123,6 +146,14 @@ export default function AccountsPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreateAccount={handleCreateAccount}
+      />
+
+      {/* ✅ AGREGAR modal de edición */}
+      <EditAccountModal
+        isOpen={editModal.isOpen}
+        onClose={() => setEditModal({ isOpen: false, account: null })}
+        onEditAccount={handleUpdateAccount}
+        account={editModal.account}
       />
 
       <ConfirmDialog

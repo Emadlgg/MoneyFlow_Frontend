@@ -17,18 +17,18 @@ interface AccountContextValue {
   loading: boolean
   error: string | null
   createAccount: (name: string, type: string, balance: number) => Promise<void>
+  updateAccount: (accountId: string, name: string, type: string) => Promise<void> // ✅ AGREGADO
   deleteAccount: (accountId: string) => Promise<void>
   active?: Account
   setActive: (account: Account) => void 
 }
-
 
 const AccountContext = createContext<AccountContextValue | undefined>(undefined)
 
 export const AccountProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth()
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [loading, setLoading] = useState(true) // Cambiado de isLoading a loading
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeAccount, setActiveAccount] = useState<Account | undefined>(undefined)
 
@@ -87,6 +87,29 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
     return data;
   };
 
+
+  const updateAccount = async (accountId: string, name: string, type: string) => {
+    if (!user) throw new Error("User not authenticated");
+
+    const { error } = await supabase
+      .from('accounts')
+      .update({ name, type })
+      .eq('id', accountId)
+      .eq('user_id', user.id) // Seguridad: solo actualizar cuentas del usuario
+
+    if (error) {
+      console.error("Error updating account:", error);
+      throw error;
+    }
+    
+    // Si la cuenta actualizada es la activa, actualizar también activeAccount
+    if (activeAccount?.id === accountId) {
+      setActiveAccount(prev => prev ? { ...prev, name, type } : undefined)
+    }
+    
+    await fetchAccounts();
+  };
+
   const deleteAccount = async (accountId: string) => {
     const { error } = await supabase
       .from('accounts')
@@ -114,9 +137,10 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
     loading,
     error,
     createAccount,
+    updateAccount,
     deleteAccount,
     active: activeAccount,
-    setActive, // ✅ AGREGAR ESTO
+    setActive,
   }
 
   return (
