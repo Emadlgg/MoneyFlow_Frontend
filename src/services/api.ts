@@ -1,4 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { supabase } from './supabaseClient';
 
 interface ApiError {
   message: string;
@@ -10,22 +11,42 @@ interface ApiError {
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
-  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('authToken');
-  if (token && config.headers) {
-    config.headers.Authorization = `Bearer ${token}`;
+// ✅ ACTUALIZAR: Usar token de Supabase en lugar de localStorage
+api.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig) => {
+    try {
+      // ✅ Obtener token de Supabase
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('❌ Error obteniendo sesión de Supabase:', error);
+        return config;
+      }
+
+      if (session?.access_token && config.headers) {
+        config.headers.Authorization = `Bearer ${session.access_token}`;
+        console.log('🔑 Token de Supabase agregado al request');
+      } else {
+        console.warn('⚠️ No hay sesión activa en Supabase');
+      }
+    } catch (error) {
+      console.error('❌ Error en interceptor de request:', error);
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 api.interceptors.response.use(
   (response) => {
     console.debug('📥 Response:', response.config.url, response.data);
-    return response; // retorna la respuesta completa
+    return response;
   },
   (error: AxiosError<ApiError>) => {
     if (error.response) {
@@ -35,6 +56,7 @@ api.interceptors.response.use(
         data: error.response.data,
       });
       if (error.response.status === 401) {
+        supabase.auth.signOut();
         window.location.href = '/login';
         return Promise.reject({ message: 'No autorizado', status: 401 });
       }
