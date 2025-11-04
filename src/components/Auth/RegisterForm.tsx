@@ -1,7 +1,7 @@
 // src/components/Auth/RegisterForm.tsx
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { supabase } from '../../services/supabaseClient'
+import { registerUser } from '../../services/auth.service'
 import GoogleLoginButton from './GoogleLoginButton'
 import '../../assets/style/auth.css'
 
@@ -14,11 +14,12 @@ export default function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    const { error } = await supabase.auth.signUp({ email, password })
-    if (error) {
-      setError(error.message)
-    } else {
+    
+    try {
+      await registerUser(email, password)
       navigate('/login')
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Error al registrar usuario')
     }
   }
 
