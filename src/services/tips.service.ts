@@ -1,38 +1,40 @@
-import api from './api';
+// services/tips.service.ts
+import api from "./api";
 
-interface UserStats {
+export interface UserStats {
   totalIncome: number;
   totalExpenses: number;
   expensesByCategory: Record<string, number>;
 }
 
-interface TipsResponse {
+export interface TipsResponse {
   success: boolean;
-  tips: string[];
+  tips?: string[];
   error?: string;
 }
 
 export const tipsService = {
-  async generateTips(userStats: UserStats): Promise<TipsResponse> {
+  async generateTips(stats: UserStats): Promise<TipsResponse> {
     try {
-      console.log('📤 [TipsService] Generando tips con datos:', userStats);
-      
-      // ✅ SIN /api porque ya está en baseURL
-      const { data } = await api.post<TipsResponse>('/tips/generate', userStats);
-      
-      console.log('✅ [TipsService] Tips recibidos:', data);
-      
-      return data;
+      console.log("📡 Enviando petición a /tips/generate con stats:", stats);
+      const response = await api.post("/tips/generate", stats);
+      console.log("📡 Respuesta recibida:", response.data);
+      return response.data;
     } catch (error: any) {
-      console.error('❌ [TipsService] Error:', error);
-      console.error('❌ Response:', error.response?.data);
-      console.error('❌ Status:', error.response?.status);
-      
+      console.error("❌ Error al generar tips:", error);
+      console.error("❌ Detalles del error:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url
+      });
       return {
         success: false,
-        tips: [],
-        error: error.response?.data?.error || error.message || 'Error al obtener consejos'
+        error:
+          error.response?.data?.error ||
+          error.message ||
+          "Error desconocido al generar los consejos.",
       };
     }
-  }
+  },
 };

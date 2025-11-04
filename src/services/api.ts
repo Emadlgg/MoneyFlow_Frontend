@@ -10,30 +10,29 @@ interface ApiError {
 }
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
   headers: { 'Content-Type': 'application/json' },
+  timeout: 30000, // ✅ 30 segundos timeout
 });
 
-// ✅ ACTUALIZAR: Usar token de Supabase en lugar de localStorage
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
-      // ✅ Obtener token de Supabase
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.error('❌ Error obteniendo sesión de Supabase:', error);
+        console.error('❌ Error obteniendo sesión:', error);
         return config;
       }
 
       if (session?.access_token && config.headers) {
         config.headers.Authorization = `Bearer ${session.access_token}`;
-        console.log('🔑 Token de Supabase agregado al request');
+        console.log('🔑 Token agregado');
       } else {
-        console.warn('⚠️ No hay sesión activa en Supabase');
+        console.warn('⚠️ No hay sesión activa');
       }
     } catch (error) {
-      console.error('❌ Error en interceptor de request:', error);
+      console.error('❌ Error en interceptor:', error);
     }
 
     return config;
@@ -45,7 +44,7 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
-    console.debug('📥 Response:', response.config.url, response.data);
+    console.debug('📥 Response:', response.config.url, response.status);
     return response;
   },
   (error: AxiosError<ApiError>) => {
@@ -55,11 +54,14 @@ api.interceptors.response.use(
         status: error.response.status,
         data: error.response.data,
       });
+      
+      // ✅ NO redirigir automáticamente en 401
+      // Solo loggear y dejar que el componente maneje el error
       if (error.response.status === 401) {
-        supabase.auth.signOut();
-        window.location.href = '/login';
-        return Promise.reject({ message: 'No autorizado', status: 401 });
+        console.error('🚫 No autorizado');
+        // NO hacer window.location.href = '/login';
       }
+      
       const apiError: ApiError = {
         ...error.response.data,
         message: error.response.data?.message || 'Error en el servidor',
@@ -67,7 +69,12 @@ api.interceptors.response.use(
       };
       return Promise.reject(apiError);
     }
-    return Promise.reject({ message: error.message || 'Error de conexión', code: 'NETWORK_ERROR' });
+    
+    console.error('❌ Network Error:', error.message);
+    return Promise.reject({ 
+      message: error.message || 'Error de conexión', 
+      code: 'NETWORK_ERROR' 
+    });
   }
 );
 

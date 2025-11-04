@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { supabase } from '../services/supabaseClient'
+import { categoryService } from '../services/category.service'
 import { useAuth } from './AuthContext'
 
 interface Category {
@@ -39,34 +39,25 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
       console.log('🔍 Fetching categories for user:', user?.id)
       
       if (!user) {
-        console.log('📝 No user, fetching default categories only')
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-          .eq('is_default', true)
-          .order('name')
-
-        if (error) {
-          console.error('❌ Error fetching default categories:', error)
-          throw error
-        }
-        console.log('✅ Default categories loaded:', data?.length)
-        setCategories(data || [])
-      } else {
-        console.log('📝 User authenticated, fetching all categories')
-        const { data, error } = await supabase
-          .from('categories')
-          .select('*')
-          .or(`user_id.eq.${user.id},is_default.eq.true`)
-          .order('name')
-
-        if (error) {
-          console.error('❌ Error fetching user categories:', error)
-          throw error
-        }
-        console.log('✅ All categories loaded:', data?.length)
-        setCategories(data || [])
+        console.log('📝 No user, skipping category fetch')
+        setCategories([])
+        return
       }
+
+      // El backend ya filtra por usuario autenticado
+      const data = await categoryService.getAll()
+      const categoriesData = data.map(cat => ({
+        id: cat.id.toString(),
+        name: cat.name,
+        type: cat.type,
+        color: cat.color || '#333333',
+        user_id: cat.user_id,
+        is_default: false,
+        created_at: cat.created_at || new Date().toISOString()
+      }))
+      
+      console.log('✅ Categories loaded:', categoriesData.length)
+      setCategories(categoriesData)
     } catch (error) {
       console.error('❌ Error in fetchCategories:', error)
       setCategories([])
@@ -86,13 +77,11 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      console.log('🔨 STARTING createCategory function:', { name, type, color, user_id: user.id })
+      console.log('🔨 Creating category:', { name, type, color })
 
       // Verificar si ya existe una categoría con ese nombre para el usuario
       const existingCategory = categories.find(
-        cat => cat.name.toLowerCase() === name.toLowerCase() && 
-               cat.type === type && 
-               (cat.user_id === user.id || cat.is_default)
+        cat => cat.name.toLowerCase() === name.toLowerCase() && cat.type === type
       )
 
       if (existingCategory) {
@@ -100,42 +89,14 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
         throw new Error('Ya existe una categoría con ese nombre')
       }
 
-      const categoryData = {
-        name: name.trim(),
-        type,
-        color,
-        user_id: user.id,
-        is_default: false
-      }
+      console.log('📤 Creating category via backend API')
 
-      console.log('📤 INSERTING category data:', categoryData)
-
-      const { data, error } = await supabase
-        .from('categories')
-        .insert([categoryData])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('❌ Supabase error creating category:', error)
-        throw error
-      }
+      await categoryService.create({ name, type, color })
       
-      console.log('✅ Category created successfully:', data)
-      console.log('🔄 Updating local categories state...')
-      
-      // IMPORTANTE: Forzar un refetch completo en lugar de solo agregar
-      setCategories(prev => {
-        const newCategories = [...prev, data]
-        console.log('📊 Updated categories count:', newCategories.length)
-        return newCategories
-      })
-      
-      // También hacer un refetch para estar seguros
+      console.log('✅ Category created successfully')
       console.log('🔄 Triggering refetch...')
-      setTimeout(() => {
-        fetchCategories()
-      }, 100)
+      
+      await fetchCategories()
       
     } catch (error) {
       console.error('❌ Error creating category:', error)
@@ -148,31 +109,17 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
       console.log('🔨 Updating category:', id, updates)
       
       const category = categories.find(cat => cat.id === id)
-      if (!category || category.is_default) {
-        throw new Error('No puedes editar categorías por defecto')
+      if (!category) {
+        throw new Error('Categoría no encontrada')
       }
 
-      const { data, error } = await supabase
-        .from('categories')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .eq('user_id', user?.id)
-        .eq('is_default', false)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('❌ Supabase error updating category:', error)
-        throw error
-      }
+      await categoryService.update(parseInt(id), {
+        name: updates.name,
+        color: updates.color
+      })
       
-      console.log('✅ Category updated successfully:', data)
-      setCategories(prev => prev.map(category => 
-        category.id === id ? { ...category, ...data } : category
-      ))
+      console.log('✅ Category updated successfully')
+      await fetchCategories()
     } catch (error) {
       console.error('❌ Error updating category:', error)
       throw error
@@ -184,24 +131,14 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
       console.log('🗑️ Deleting category:', id)
       
       const category = categories.find(cat => cat.id === id)
-      if (!category || category.is_default) {
-        throw new Error('No puedes eliminar categorías por defecto')
+      if (!category) {
+        throw new Error('Categoría no encontrada')
       }
 
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user?.id)
-        .eq('is_default', false)
-
-      if (error) {
-        console.error('❌ Supabase error deleting category:', error)
-        throw error
-      }
+      await categoryService.delete(parseInt(id))
       
       console.log('✅ Category deleted successfully')
-      setCategories(prev => prev.filter(category => category.id !== id))
+      await fetchCategories()
     } catch (error) {
       console.error('❌ Error deleting category:', error)
       throw error

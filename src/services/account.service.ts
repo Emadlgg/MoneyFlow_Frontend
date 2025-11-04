@@ -1,43 +1,54 @@
-import { supabase } from './supabaseClient'
+import api from './api';
 
 export interface Account {
-  id: number
-  user_id: string
-  name: string
-  created_at: string
+  id: number;
+  user_id: string;
+  name: string;
+  type: string;
+  balance: number;
+  created_at: string;
+}
+
+export interface CreateAccountParams {
+  name: string;
+  type: 'checking' | 'savings' | 'credit' | 'cash' | 'investment';
+  balance: number;
+}
+
+export interface UpdateAccountParams {
+  name?: string;
+  type?: 'checking' | 'savings' | 'credit' | 'cash' | 'investment';
 }
 
 export const accountService = {
-  /** Devuelve todas las cuentas del usuario */
+  /**
+   * Obtiene todas las cuentas del usuario autenticado
+   */
   async getAll(): Promise<Account[]> {
-    const { data, error } = await supabase
-      .from('accounts')
-      .select('*')
-      .order('created_at', { ascending: true })
-
-    if (error) throw error
-    return data ?? []
+    const { data } = await api.get<Account[]>('/accounts');
+    return data;
   },
 
-  /** Crea una nueva cuenta */
-  async create(name: string): Promise<Account> {
-    const { data, error } = await supabase
-      .from('accounts')
-      .insert({ name })
-      .select('*')
-      .single()
-
-    if (error) throw error
-    return data
+  /**
+   * Crea una nueva cuenta
+   */
+  async create(account: CreateAccountParams): Promise<Account> {
+    const { data } = await api.post<Account>('/accounts', account);
+    return data;
   },
 
-  /** Elimina una cuenta por su id */
-  async remove(id: number): Promise<void> {
-    const { error } = await supabase
-      .from('accounts')
-      .delete()
-      .eq('id', id)
-
-    if (error) throw error
+  /**
+   * Actualiza una cuenta existente
+   */
+  async update(id: number, updates: UpdateAccountParams): Promise<Account> {
+    const { data } = await api.put<Account>(`/accounts/${id}`, updates);
+    return data;
   },
-}
+
+  /**
+   * Elimina una cuenta
+   */
+  async delete(id: number): Promise<void> {
+    await api.delete(`/accounts/${id}`);
+  },
+};

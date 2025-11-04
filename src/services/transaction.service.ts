@@ -1,58 +1,74 @@
-import { supabase } from './supabaseClient'
+import api from './api';
 
 export interface Transaction {
-  id: number
-  user_id: string
-  account_id: number
-  category: string   // texto
-  amount: number
-  date: string
-  created_at: string
-  updated_at: string
+  id: string;
+  user_id: string;
+  amount: number;
+  category_id: number;
+  account_id: number;
+  type: 'income' | 'expense';
+  date: string;
+  description?: string;
+  created_at?: string;
+}
+
+export interface CreateTransactionParams {
+  amount: number;
+  category_id: number;
+  account_id: number;
+  type: 'income' | 'expense';
+  date?: string;
+  description?: string;
+}
+
+export interface UpdateTransactionParams {
+  amount?: number;
+  category_id?: number;
+  date?: string;
+  description?: string;
 }
 
 export const transactionService = {
-  /** Trae todas las transacciones de una cuenta */
-  async getAll(accountId: number): Promise<Transaction[]> {
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('account_id', accountId)
-      .order('date', { ascending: false })
-
-    if (error) throw error
-    return (data as Transaction[]) ?? []
+  /**
+   * Obtiene todas las transacciones del usuario autenticado
+   * @param filters - Filtros opcionales (account_id, type)
+   */
+  async getAll(filters?: { account_id?: number; type?: 'income' | 'expense' }): Promise<Transaction[]> {
+    const params = new URLSearchParams();
+    if (filters?.account_id) params.append('account_id', filters.account_id.toString());
+    if (filters?.type) params.append('type', filters.type);
+    
+    const queryString = params.toString();
+    const url = queryString ? `/transactions?${queryString}` : '/transactions';
+    
+    const { data } = await api.get<Transaction[]>(url);
+    return data;
   },
 
-  /** Inserta una nueva transacción */
-  async create(entry: {
-    user_id: string
-    account_id: number
-    category: string
-    amount: number
-    date: string
-  }): Promise<Transaction> {
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert([entry])
-      .select('*')
-      .single()
-
-    if (error) throw error
-    return data as Transaction
+  /**
+   * Crea una nueva transacción
+   */
+  async create(transaction: CreateTransactionParams): Promise<Transaction> {
+    const { data } = await api.post<Transaction>('/transactions', transaction);
+    return data;
   },
 
-  /** Borra una transacción por su id */
-  async remove(id: number): Promise<void> {
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('id', id)
-
-    if (error) throw error
+  /**
+   * Actualiza una transacción existente
+   */
+  async update(id: string, updates: UpdateTransactionParams): Promise<Transaction> {
+    const { data } = await api.put<Transaction>(`/transactions/${id}`, updates);
+    return data;
   },
-}
 
-export const getTransactions  = transactionService.getAll
-export const addTransaction    = transactionService.create
-export const removeTransaction = transactionService.remove
+  /**
+   * Elimina una transacción
+   */
+  async delete(id: string): Promise<void> {
+    await api.delete(`/transactions/${id}`);
+  },
+};
+
+export const getTransactions  = transactionService.getAll;
+export const addTransaction    = transactionService.create;
+export const removeTransaction = transactionService.delete;

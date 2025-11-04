@@ -1,46 +1,61 @@
-import { supabase } from './supabaseClient'
+import api from './api';
 
 export interface Category {
-  id: number
-  user_id: string
-  name: string
-  transaction_type: 'ingreso' | 'gasto'
-  created_at: string
+  id: number;
+  user_id: string;
+  name: string;
+  type: 'income' | 'expense';
+  color?: string;
+  created_at: string;
+}
+
+export interface CreateCategoryParams {
+  name: string;
+  type: 'income' | 'expense';
+  color?: string;
+}
+
+export interface UpdateCategoryParams {
+  name?: string;
+  color?: string;
 }
 
 export const categoryService = {
-  /** Trae categorías de un usuario y un tipo (ingreso/gasto) */
-  async getAll(userId: string, type: 'ingreso' | 'gasto'): Promise<Category[]> {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('transaction_type', type)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    return (data as Category[]) ?? []
+  /**
+   * Obtiene todas las categorías del usuario
+   * @param type - Filtro opcional por tipo (income/expense)
+   */
+  async getAll(type?: 'income' | 'expense'): Promise<Category[]> {
+    const params = new URLSearchParams();
+    if (type) params.append('type', type);
+    
+    const queryString = params.toString();
+    const url = queryString ? `/categories?${queryString}` : '/categories';
+    
+    const { data } = await api.get<Category[]>(url);
+    return data;
   },
 
-  /** Crea una categoría nueva */
-  async create(userId: string, name: string, type: 'ingreso' | 'gasto'): Promise<Category> {
-    const { data, error } = await supabase
-      .from('categories')
-      .insert([{ user_id: userId, name, transaction_type: type }])
-      .select('*')
-      .single()
-
-    if (error) throw error
-    return data as Category
+  /**
+   * Crea una nueva categoría
+   */
+  async create(category: CreateCategoryParams): Promise<Category> {
+    const { data } = await api.post<Category>('/categories', category);
+    return data;
   },
 
-  /** Elimina por ID */
-  async remove(id: number): Promise<void> {
-    const { error } = await supabase
-      .from('categories')
-      .delete()
-      .eq('id', id)
-
-    if (error) throw error
+  /**
+   * Actualiza una categoría existente
+   */
+  async update(id: number, updates: UpdateCategoryParams): Promise<Category> {
+    const { data } = await api.put<Category>(`/categories/${id}`, updates);
+    return data;
   },
-}
+
+  /**
+   * Elimina una categoría
+   */
+  async delete(id: number): Promise<void> {
+    await api.delete(`/categories/${id}`);
+  },
+};

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react'
-import { supabase } from '../services/supabaseClient'
+import { accountService } from '../services/account.service'
 import { useAuth } from './AuthContext'
 
 interface Account {
@@ -42,14 +42,24 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
     setLoading(true)
     setError(null)
     try {
-      const { data, error } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      const accountsData = data || []
+      const data = await accountService.getAll()
+      
+      // Validar que data sea un array
+      if (!Array.isArray(data)) {
+        console.error("❌ La respuesta no es un array:", data)
+        setAccounts([])
+        setError('Formato de respuesta inválido')
+        return
+      }
+      
+      const accountsData = data.map(acc => ({
+        id: acc.id.toString(),
+        user_id: acc.user_id,
+        name: acc.name,
+        type: acc.type || 'checking',
+        balance: acc.balance || 0,
+        created_at: acc.created_at || new Date().toISOString()
+      }))
       setAccounts(accountsData)
       
       // Si no hay cuenta activa y hay cuentas, establecer la primera como activa
@@ -58,6 +68,7 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
       }
     } catch (err: any) {
       console.error("Error fetching accounts:", err)
+      setAccounts([])
       setError(err.message || 'Failed to fetch accounts')
     } finally {
       setLoading(false)
@@ -71,59 +82,52 @@ export const AccountProvider = ({ children }: { children: React.ReactNode }) => 
   const createAccount = async (name: string, type: string, initialBalance: number) => {
     if (!user) throw new Error("User not authenticated");
 
-    const { data, error } = await supabase.rpc('create_account_with_initial_transaction', {
-      p_user_id: user.id,
-      p_account_name: name,
-      p_account_type: type,
-      p_initial_balance: initialBalance
-    });
-
-    if (error) {
-      console.error("Error creating account:", error);
-      throw error;
+    try {
+      await accountService.create({ 
+        name, 
+        type: type as any, 
+        balance: initialBalance 
+      })
+      await fetchAccounts()
+    } catch (error) {
+      console.error("Error creating account:", error)
+      throw error
     }
-    
-    await fetchAccounts();
-    return data;
   };
 
 
   const updateAccount = async (accountId: string, name: string, type: string) => {
     if (!user) throw new Error("User not authenticated");
 
-    const { error } = await supabase
-      .from('accounts')
-      .update({ name, type })
-      .eq('id', accountId)
-      .eq('user_id', user.id) // Seguridad: solo actualizar cuentas del usuario
-
-    if (error) {
-      console.error("Error updating account:", error);
-      throw error;
+    try {
+      await accountService.update(parseInt(accountId), { name, type: type as any })
+      
+      // Si la cuenta actualizada es la activa, actualizar también activeAccount
+      if (activeAccount?.id === accountId) {
+        setActiveAccount(prev => prev ? { ...prev, name, type } : undefined)
+      }
+      
+      await fetchAccounts()
+    } catch (error) {
+      console.error("Error updating account:", error)
+      throw error
     }
-    
-    // Si la cuenta actualizada es la activa, actualizar también activeAccount
-    if (activeAccount?.id === accountId) {
-      setActiveAccount(prev => prev ? { ...prev, name, type } : undefined)
-    }
-    
-    await fetchAccounts();
   };
 
   const deleteAccount = async (accountId: string) => {
-    const { error } = await supabase
-      .from('accounts')
-      .delete()
-      .eq('id', accountId);
-
-    if (error) throw error;
-    
-    // Si la cuenta eliminada era la activa, limpiar activeAccount
-    if (activeAccount?.id === accountId) {
-      setActiveAccount(undefined)
+    try {
+      await accountService.delete(parseInt(accountId))
+      
+      // Si la cuenta eliminada era la activa, limpiar activeAccount
+      if (activeAccount?.id === accountId) {
+        setActiveAccount(undefined)
+      }
+      
+      await fetchAccounts()
+    } catch (error) {
+      console.error("Error deleting account:", error)
+      throw error
     }
-    
-    await fetchAccounts();
   };
 
   // Función para establecer cuenta activa
