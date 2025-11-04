@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
+import { loginUser } from '../services/auth.service'
 import type { Session, User } from '@supabase/supabase-js'
 
 interface AuthContextValue {
@@ -51,8 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signIn = async (email: string, pass: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass })
-    if (error) throw error
+    try {
+      // Usar el backend para login
+      const { token } = await loginUser(email, pass)
+      
+      // Establecer la sesión en Supabase con el token recibido
+      const { error } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: token // En este caso usamos el mismo token
+      })
+      
+      if (error) throw error
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || error.message || 'Error al iniciar sesión')
+    }
   }
 
   const signOut = async () => {
