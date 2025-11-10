@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { transactionService } from '../services/transaction.service';
+import { categoryService } from '../services/category.service';
 import { useAuth } from '../contexts/AuthContext';
 import { useSelectedAccount } from '../contexts/SelectedAccountContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Sector } from 'recharts';
@@ -78,25 +79,24 @@ export default function ReportsPage() {
             }
             setLoading(true);
             try {
-                const [transactionsRes, categoriesRes] = await Promise.all([
-                    supabase
-                        .from('transactions')
-                        .select('amount, category_id, type, date')
-                        .eq('user_id', user.id)
-                        .eq('account_id', selectedAccountId)
-                        .gte('date', dateRange.start)
-                        .lte('date', dateRange.end),
-                    supabase
-                        .from('categories')
-                        .select('id, name, color, type')
-                        .eq('user_id', user.id)
+                const [transactionsData, categoriesData] = await Promise.all([
+                    transactionService.getAll({ account_id: parseInt(selectedAccountId) }),
+                    categoryService.getAll()
                 ]);
 
-                if (transactionsRes.error) throw transactionsRes.error;
-                if (categoriesRes.error) throw categoriesRes.error;
+                // Filtrar por rango de fechas
+                const filteredTransactions = transactionsData.filter(t => {
+                    const transactionDate = new Date(t.date).toISOString().split('T')[0];
+                    return transactionDate >= dateRange.start && transactionDate <= dateRange.end;
+                });
 
-                setTransactions(transactionsRes.data || []);
-                setCategories(categoriesRes.data || []);
+                setTransactions(filteredTransactions);
+                setCategories(categoriesData.map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    color: cat.color || '#333333',
+                    type: cat.type
+                })));
             } catch (error) {
                 console.error("Error fetching report data:", error);
             } finally {
