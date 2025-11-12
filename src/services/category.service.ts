@@ -6,6 +6,7 @@ export interface Category {
   name: string;
   type: 'income' | 'expense';
   color?: string;
+  spending_limit?: number | null;
   created_at: string;
 }
 
@@ -13,6 +14,7 @@ export interface CreateCategoryParams {
   name: string;
   type: 'income' | 'expense';
   color?: string;
+  spending_limit?: number | null;
 }
 
 export interface UpdateCategoryParams {

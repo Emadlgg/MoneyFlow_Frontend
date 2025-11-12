@@ -17,7 +17,7 @@ interface CategoryContextValue {
   incomeCategories: Category[]
   expenseCategories: Category[]
   loading: boolean
-  createCategory: (name: string, type: 'income' | 'expense', color?: string) => Promise<void>
+  createCategory: (name: string, type: 'income' | 'expense', color?: string, spending_limit?: number | null) => Promise<void>
   updateCategory: (id: string, updates: Partial<Category>) => Promise<void>
   deleteCategory: (id: string) => Promise<void>
   refetch: () => Promise<void>
@@ -70,14 +70,14 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
     fetchCategories()
   }, [user])
 
-  const createCategory = async (name: string, type: 'income' | 'expense', color: string = '#333333') => {
+  const createCategory = async (name: string, type: 'income' | 'expense', color: string = '#333333', spending_limit: number | null = null) => {
     if (!user) {
       console.error('❌ No user authenticated')
       throw new Error('User not authenticated')
     }
 
     try {
-      console.log('🔨 Creating category:', { name, type, color })
+      console.log('🔨 Creating category:', { name, type, color, spending_limit })
 
       // Verificar si ya existe una categoría con ese nombre para el usuario
       const existingCategory = categories.find(
@@ -91,7 +91,7 @@ export function CategoryProvider({ children }: { children: ReactNode }) {
 
       console.log('📤 Creating category via backend API')
 
-      await categoryService.create({ name, type, color })
+      await categoryService.create({ name, type, color, spending_limit })
       
       console.log('✅ Category created successfully')
       console.log('🔄 Triggering refetch...')

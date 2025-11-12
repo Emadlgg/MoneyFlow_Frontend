@@ -22,14 +22,6 @@ export function useSpendingLimits(userId: string) {
       console.log('🔍 === VERIFICANDO LÍMITES ===');
       console.log('👤 Usuario:', userId);
       
-      // NOTA: La funcionalidad de spending_limit requiere agregar el campo a la tabla categories en Supabase
-      // Por ahora, retornamos array vacío hasta que se agregue el campo a la base de datos
-      console.log('⚠️ spending_limit no está implementado en la base de datos');
-      setAlerts([]);
-      
-      /* 
-      // TODO: Descomentar cuando se agregue spending_limit a la tabla categories
-      
       // Obtener categorías con límites usando el backend
       const categories = await categoryService.getAll('expense');
       const categoriesWithLimit = categories.filter(cat => cat.spending_limit != null);
@@ -59,7 +51,7 @@ export function useSpendingLimits(userId: string) {
         // Obtener transacciones del mes actual para esta categoría usando el backend
         const transactions = await transactionService.getAll({
           type: 'expense',
-          category_id: parseInt(category.id),
+          category_id: category.id,
           start_date: startDate,
           end_date: endDate
         });
@@ -87,7 +79,6 @@ export function useSpendingLimits(userId: string) {
       console.log('🔔 Total de alertas a mostrar:', alertsToShow.length);
       setAlerts(alertsToShow);
       console.log('✅ Estado de alertas actualizado');
-      */
       
     } catch (error) {
       console.error('❌ Error:', error);

@@ -22,6 +22,7 @@ export default function CategoryManager({ type, selectedCategoryId, onCategorySe
   const [isCreating, setIsCreating] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState(type === 'income' ? '#28a745' : '#e53e3e');
+  const [newCategorySpendingLimit, setNewCategorySpendingLimit] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [transactionCount, setTransactionCount] = useState(0);
@@ -39,10 +40,21 @@ export default function CategoryManager({ type, selectedCategoryId, onCategorySe
     if (!user || !newCategoryName.trim()) return;
 
     try {
-      await createCategory(newCategoryName.trim(), type, newCategoryColor);
+      // Convertir spending_limit a número o null
+      const spendingLimitValue = newCategorySpendingLimit.trim() 
+        ? parseFloat(newCategorySpendingLimit) 
+        : null;
+
+      await createCategory(
+        newCategoryName.trim(), 
+        type, 
+        newCategoryColor, 
+        spendingLimitValue
+      );
       
       setNewCategoryName('');
       setNewCategoryColor(type === 'income' ? '#28a745' : '#e53e3e');
+      setNewCategorySpendingLimit('');
       setIsCreating(false);
       
       if (onCategoriesUpdate) {
@@ -134,13 +146,14 @@ export default function CategoryManager({ type, selectedCategoryId, onCategorySe
             className="new-category-color"
           />
           
-          {/* NOTA: spending_limit requiere agregar el campo a la tabla categories en Supabase
           {type === 'expense' && (
             <div className="spending-limit-field">
               <input
                 type="number"
                 step="0.01"
                 min="0"
+                value={newCategorySpendingLimit}
+                onChange={(e) => setNewCategorySpendingLimit(e.target.value)}
                 placeholder="Límite mensual (opcional)"
                 className="spending-limit-input"
                 style={{
@@ -157,7 +170,6 @@ export default function CategoryManager({ type, selectedCategoryId, onCategorySe
               </small>
             </div>
           )}
-          */}
           
           <div className="create-category-actions">
             <button onClick={handleCreateCategory} className="save-btn">Guardar</button>
