@@ -131,44 +131,71 @@ export default function CategoryManager({ type, selectedCategoryId, onCategorySe
   return (
     <div className="category-manager">
       {isCreating ? (
-        <div className="create-category-form">
+        <div className="create-category-form" style={{ display: 'block' }}>
           <input
             type="text"
             value={newCategoryName}
             onChange={(e) => setNewCategoryName(e.target.value)}
             placeholder="Nombre de la categoría"
             className="new-category-input"
-          />
-          <input
-            type="color"
-            value={newCategoryColor}
-            onChange={(e) => setNewCategoryColor(e.target.value)}
-            className="new-category-color"
+            style={{ 
+              width: '70%',
+              padding: '10px 12px',
+              fontSize: '15px',
+              marginBottom: '12px'
+            }}
           />
           
           {type === 'expense' && (
-            <div className="spending-limit-field">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
               <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={newCategorySpendingLimit}
-                onChange={(e) => setNewCategorySpendingLimit(e.target.value)}
-                placeholder="Límite mensual (opcional)"
-                className="spending-limit-input"
+                type="color"
+                value={newCategoryColor}
+                onChange={(e) => setNewCategoryColor(e.target.value)}
+                className="new-category-color"
                 style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  marginTop: '8px'
+                  height: '44px',
+                  width: '44px',
+                  borderRadius: '8px',
+                  flexShrink: 0
                 }}
               />
-              <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                Recibirás una notificación al superar el 80% del límite
-              </small>
+              <div className="spending-limit-field" style={{ flex: 1 }}>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={newCategorySpendingLimit}
+                  onChange={(e) => setNewCategorySpendingLimit(e.target.value)}
+                  placeholder="Límite mensual (opcional)"
+                  className="spending-limit-input"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '15px'
+                  }}
+                />
+                <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '6px', marginBottom: '8px' }}>
+                  Recibirás una notificación al superar el 80% del límite
+                </small>
+              </div>
             </div>
+          )}
+          
+          {type === 'income' && (
+            <input
+              type="color"
+              value={newCategoryColor}
+              onChange={(e) => setNewCategoryColor(e.target.value)}
+              className="new-category-color"
+              style={{
+                height: '44px',
+                width: '44px',
+                borderRadius: '8px',
+              }}
+            />
           )}
           
           <div className="create-category-actions">
