@@ -116,7 +116,7 @@ export default function AccountsPage() {
                 <h3 className="account-card__name">{account.name}</h3>
                 <p className="account-card__type">Tipo: {account.type}</p>
                 <p className="account-card__balance">
-                  Saldo: <span className="balance-amount">${account.balance.toLocaleString()}</span>
+                  Saldo: <span className="balance-amount">Q{account.balance.toLocaleString()}</span>
                 </p>
               </div>
               <div className="account-card__actions">

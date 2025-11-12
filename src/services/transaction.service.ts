@@ -73,7 +73,7 @@ export const transactionService = {
   /**
    * Elimina una transacción
    */
-  async delete(id: string): Promise<void> {
+  async delete(id: string | number): Promise<void> {
     await api.delete(`/transactions/${id}`);
   },
 };

@@ -4,7 +4,7 @@ import { Transaction } from '../../services/transaction.service'
 
 interface Props {
   transactions: Transaction[]
-  onDelete: (id: number) => void
+  onDelete: (id: string) => void
 }
 
 export default function TransactionList({ transactions, onDelete }: Props) {
@@ -13,9 +13,9 @@ export default function TransactionList({ transactions, onDelete }: Props) {
       {transactions.map(tx => (
         <div key={tx.id} className="card flex justify-between items-center">
           <div>
-            <strong>{tx.category}</strong>{' '}
+            <strong>Categoría {tx.category_id}</strong>{' '}
             <span>
-              ${Math.abs(tx.amount).toFixed(2)}{' '}
+              Q{Math.abs(tx.amount).toFixed(2)}{' '}
               <small>{new Date(tx.date).toLocaleDateString()}</small>
             </span>
           </div>

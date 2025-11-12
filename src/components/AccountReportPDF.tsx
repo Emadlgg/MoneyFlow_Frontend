@@ -1,5 +1,5 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer';
 
 interface Category {
   id: number;
@@ -27,6 +27,11 @@ interface Props {
   dateRange: { start: string; end: string };
   reportData: ReportData;
   transactions: Transaction[];
+  chartImages?: {
+    trendChart?: string;
+    expenseChart?: string;
+    incomeChart?: string;
+  };
 }
 
 const styles = StyleSheet.create({
@@ -47,6 +52,8 @@ const styles = StyleSheet.create({
   tableCell: { flex: 1, padding: 6, fontSize: 11, color: '#444' },
   tableRowAlt: { backgroundColor: '#f8fafc' },
   noData: { fontSize: 12, color: '#888', marginTop: 12, textAlign: 'center' },
+  chartImage: { width: '100%', marginTop: 16, marginBottom: 16 },
+  chartTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 8, marginTop: 16, color: '#222', textAlign: 'center' },
 });
 
 function formatDate(date: string) {
@@ -58,6 +65,7 @@ export function AccountReportPDF({
   dateRange,
   reportData,
   transactions,
+  chartImages,
 }: Props) {
   return (
     <Document>
@@ -69,17 +77,26 @@ export function AccountReportPDF({
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>Ingresos Totales</Text>
-            <Text style={styles.summaryValueIncome}>${reportData.totalIncome.toLocaleString()}</Text>
+            <Text style={styles.summaryValueIncome}>Q{reportData.totalIncome.toLocaleString()}</Text>
           </View>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>Gastos Totales</Text>
-            <Text style={styles.summaryValueExpense}>${reportData.totalExpense.toLocaleString()}</Text>
+            <Text style={styles.summaryValueExpense}>Q{reportData.totalExpense.toLocaleString()}</Text>
           </View>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>Balance Neto</Text>
-            <Text style={styles.summaryValueBalance}>${reportData.netBalance.toLocaleString()}</Text>
+            <Text style={styles.summaryValueBalance}>Q{reportData.netBalance.toLocaleString()}</Text>
           </View>
         </View>
+        
+        {/* Gráfica de Tendencia */}
+        {chartImages?.trendChart && (
+          <>
+            <Text style={styles.chartTitle}>Tendencia de Ingresos vs. Gastos (Mensual)</Text>
+            <Image src={chartImages.trendChart} style={styles.chartImage} />
+          </>
+        )}
+        
         <Text style={styles.sectionTitle}>Transacciones</Text>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
@@ -102,7 +119,9 @@ export function AccountReportPDF({
                 <Text style={styles.tableCell}>{formatDate(t.date)}</Text>
                 <Text style={styles.tableCell}>{t.type === 'income' ? 'Ingreso' : 'Gasto'}</Text>
                 <Text style={styles.tableCell}>{reportData.categoryMap[t.category_id]?.name || 'Sin Categoría'}</Text>
-                <Text style={styles.tableCell}>${t.amount.toLocaleString()}</Text>
+                <Text style={styles.tableCell}>
+                  {t.type === 'expense' ? `-Q${Math.abs(t.amount).toLocaleString()}` : `Q${Math.abs(t.amount).toLocaleString()}`}
+                </Text>
               </View>
             ))
           )}

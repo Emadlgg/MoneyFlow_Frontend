@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { transactionService } from '../services/transaction.service';
 import { categoryService } from '../services/category.service';
 import { useAuth } from '../contexts/AuthContext';
 import { useSelectedAccount } from '../contexts/SelectedAccountContext';
+import { useAccount } from '../contexts/AccountContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Sector } from 'recharts';
-import { PDFDownloadLink } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 import { AccountReportPDF } from '../components/AccountReportPDF';
+import html2canvas from 'html2canvas';
 import './reports.css';
 
 // --- Interfaces ---
@@ -46,7 +48,7 @@ const renderActiveShape = (props: any) => {
             <Sector cx={cx} cy={cy} startAngle={startAngle} endAngle={endAngle} innerRadius={outerRadius + 6} outerRadius={outerRadius + 10} fill={fill} />
             <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
             <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-            <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333">{`$${value.toLocaleString()}`}</text>
+            <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333">{`Q${value.toLocaleString()}`}</text>
             <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="#999">
                 {`(${(percent * 100).toFixed(2)}%)`}
             </text>
@@ -58,11 +60,26 @@ const renderActiveShape = (props: any) => {
 export default function ReportsPage() {
     const { user } = useAuth();
     const { selectedAccountId } = useSelectedAccount();
+    const { accounts } = useAccount();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeExpenseIndex, setActiveExpenseIndex] = useState(0);
     const [activeIncomeIndex, setActiveIncomeIndex] = useState(0);
+    const [generatingPDF, setGeneratingPDF] = useState(false);
+    const [chartImages, setChartImages] = useState<{
+        trendChart?: string;
+        expenseChart?: string;
+        incomeChart?: string;
+    }>({});
+    
+    // Obtener cuenta seleccionada
+    const selectedAccount = accounts.find(acc => acc.id === selectedAccountId);
+    
+    // Referencias a los contenedores de las gráficas
+    const trendChartRef = useRef<HTMLDivElement>(null);
+    const expenseChartRef = useRef<HTMLDivElement>(null);
+    const incomeChartRef = useRef<HTMLDivElement>(null);
     
     // Estado para el rango de fechas
     const [dateRange, setDateRange] = useState({
@@ -145,6 +162,70 @@ export default function ReportsPage() {
         setDateRange(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
+    // Función para capturar las gráficas como imágenes en base64
+    const captureCharts = async () => {
+        const images: { trendChart?: string; expenseChart?: string; incomeChart?: string } = {};
+        
+        try {
+            // Capturar solo el gráfico de tendencia
+            if (trendChartRef.current) {
+                const canvas = await html2canvas(trendChartRef.current, {
+                    backgroundColor: '#ffffff',
+                    scale: 2, // Mayor calidad
+                });
+                images.trendChart = canvas.toDataURL('image/png');
+            }
+            
+            return images;
+        } catch (error) {
+            console.error('Error capturando gráficas:', error);
+            return {};
+        }
+    };
+
+    // Función para generar y descargar el PDF automáticamente
+    const handleDownloadPDF = async () => {
+        setGeneratingPDF(true);
+        try {
+            // 1. Capturar gráficas
+            const images = await captureCharts();
+            
+            // 2. Generar el PDF con las imágenes
+            const pdfDoc = pdf(
+                <AccountReportPDF
+                    accountName={selectedAccount?.name || 'Sin nombre'}
+                    dateRange={dateRange}
+                    reportData={{ ...reportData, categoryMap }}
+                    transactions={transactions}
+                    chartImages={images}
+                />
+            );
+            
+            // 3. Convertir a blob
+            const blob = await pdfDoc.toBlob();
+            
+            // 4. Crear link de descarga temporal
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Reporte_${dateRange.start}_a_${dateRange.end}.pdf`;
+            
+            // 5. Trigger descarga
+            document.body.appendChild(link);
+            link.click();
+            
+            // 6. Limpiar
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+        } catch (error) {
+            console.error('Error generando PDF:', error);
+            alert('Error al generar el PDF. Inténtalo de nuevo.');
+        } finally {
+            setGeneratingPDF(false);
+        }
+    };
+
     // --- Renderizado ---
     if (loading) return <div className="reports-page"><p>Cargando reportes...</p></div>;
     if (!selectedAccountId) return <div className="reports-page"><div className="no-account-selected"><h2>Selecciona una cuenta para ver los reportes.</h2></div></div>;
@@ -152,20 +233,23 @@ export default function ReportsPage() {
     return (
         <div className="reports-page">
             <h2 className="reports-title">Reportes</h2>
-            <PDFDownloadLink
-              document={
-                <AccountReportPDF
-                  accountName={'Nombre de la cuenta'}
-                  dateRange={dateRange}
-                  reportData={{ ...reportData, categoryMap }}
-                  transactions={transactions}
-                />
-              }
-              fileName={`Reporte_${dateRange.start}_a_${dateRange.end}.pdf`}
-              style={{ marginBottom: '16px', display: 'inline-block', padding: '8px 16px', background: '#007bff', color: '#fff', borderRadius: 4, textDecoration: 'none' }}
+            <button
+              onClick={handleDownloadPDF}
+              disabled={generatingPDF}
+              style={{ 
+                marginBottom: '16px', 
+                padding: '8px 16px', 
+                background: generatingPDF ? '#6c757d' : '#007bff', 
+                color: '#fff', 
+                borderRadius: 4, 
+                border: 'none', 
+                cursor: generatingPDF ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
             >
-              {({ loading }) => loading ? 'Generando PDF...' : '📄 Descargar PDF'}
-            </PDFDownloadLink>
+              {generatingPDF ? '⏳ Generando PDF...' : '📄 Descargar PDF'}
+            </button>
             <div id="report-content">
                 <div className="date-filter-container">
                     <div className="form-group">
@@ -179,23 +263,23 @@ export default function ReportsPage() {
                 </div>
 
                 <div className="summary-cards">
-                    <div className="card"><h4 >Ingresos Totales</h4><p className="income">${reportData.totalIncome.toLocaleString()}</p></div>
-                    <div className="card"><h4>Gastos Totales</h4><p className="expense">${reportData.totalExpense.toLocaleString()}</p></div>
-                    <div className="card"><h4>Balance Neto</h4><p className={reportData.netBalance >= 0 ? 'income' : 'expense'}>${reportData.netBalance.toLocaleString()}</p></div>
+                    <div className="card"><h4 >Ingresos Totales</h4><p className="income">Q{reportData.totalIncome.toLocaleString()}</p></div>
+                    <div className="card"><h4>Gastos Totales</h4><p className="expense">Q{reportData.totalExpense.toLocaleString()}</p></div>
+                    <div className="card"><h4>Balance Neto</h4><p className={reportData.netBalance >= 0 ? 'income' : 'expense'}>Q{reportData.netBalance.toLocaleString()}</p></div>
                 </div>
 
                 {transactions.length === 0 ? (
                     <div className="no-data-message">No hay transacciones en el período seleccionado.</div>
                 ) : (
                     <>
-                        <div className="chart-container">
+                        <div className="chart-container" ref={trendChartRef}>
                             <h3>Tendencia de Ingresos vs. Gastos (Mensual)</h3>
                             <ResponsiveContainer width="100%" height={300}>
                                 <BarChart data={reportData.trendChartData}>
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="month" />
                                     <YAxis />
-                                    <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                                    <Tooltip formatter={(value: number) => `Q${value.toLocaleString()}`} />
                                     <Legend />
                                     <Bar dataKey="income" fill="#28a745" name="Ingresos" />
                                     <Bar dataKey="expense" fill="#dc3545" name="Gastos" />
@@ -204,7 +288,7 @@ export default function ReportsPage() {
                         </div>
 
                         <div className="pie-charts-container">
-                            <div className="chart-container">
+                            <div className="chart-container" ref={expenseChartRef}>
                                 <h3>Distribución de Gastos</h3>
                                 <ResponsiveContainer width="100%" height={400}>
                                     <PieChart>
@@ -214,7 +298,7 @@ export default function ReportsPage() {
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
-                            <div className="chart-container">
+                            <div className="chart-container" ref={incomeChartRef}>
                                 <h3>Distribución de Ingresos</h3>
                                 <ResponsiveContainer width="100%" height={400}>
                                     <PieChart>

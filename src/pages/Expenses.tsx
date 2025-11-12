@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { transactionService } from '../services/transaction.service'
-import { categoryService } from '../services/category.service'
+import { categoryService, Category } from '../services/category.service'
 import { useAuth } from '../contexts/AuthContext'
 import { useSelectedAccount } from '../contexts/SelectedAccountContext'
 import { useAccount } from '../contexts/AccountContext'
@@ -15,12 +15,6 @@ interface Transaction {
   date: string
   account_id: number  // Cambiado de string a number
   description?: string
-}
-
-interface Category {
-  id: number;
-  name: string;
-  color: string;
 }
 
 export default function ExpensesPage() {
@@ -38,6 +32,15 @@ export default function ExpensesPage() {
     description: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null)
+  const [editFormData, setEditFormData] = useState({
+    amount: '',
+    category_id: '',
+    date: '',
+    description: ''
+  })
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
 
   const selectedAccount = accounts.find(acc => acc.id === selectedAccountId)
 
@@ -65,19 +68,15 @@ export default function ExpensesPage() {
           account_id: parseInt(selectedAccountId),
           type: 'expense'
         }),
-        categoryService.getAll('expense')
+        categoryService.getAll('expense') as Promise<Category[]>
       ]);
 
       setTransactions(transactionsData || [])
-      setCategories(categoriesData.map(cat => ({
-        id: parseInt(cat.id.toString()),
-        name: cat.name,
-        color: cat.color || '#333333'
-      })))
+      setCategories((categoriesData || []) as Category[])
     } catch (error) {
       console.error('Error fetching expenses:', error)
       setTransactions([])
-      setCategories([])
+      setCategories([] as Category[])
     } finally {
       setLoading(false)
     }
@@ -145,6 +144,93 @@ export default function ExpensesPage() {
     }
   }
 
+  const handleDeleteTransaction = async (transactionId: string) => {
+    if (!window.confirm('¿Estás seguro de eliminar esta transacción?')) {
+      return
+    }
+
+    setDeletingId(transactionId)
+    try {
+      await transactionService.delete(parseInt(transactionId))
+      
+      // Actualizar la lista local eliminando la transacción
+      setTransactions(prev => prev.filter(t => t.id !== transactionId))
+      
+      // Refrescar el saldo de la cuenta
+      refetchAccounts()
+    } catch (error) {
+      console.error('Error deleting transaction:', error)
+      alert('Error al eliminar la transacción. Inténtalo de nuevo.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleEditClick = (transaction: Transaction) => {
+    setEditingTransaction(transaction)
+    setEditFormData({
+      amount: transaction.amount.toString(),
+      category_id: transaction.category_id.toString(),
+      date: transaction.date,
+      description: transaction.description || ''
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTransaction(null)
+    setEditFormData({
+      amount: '',
+      category_id: '',
+      date: '',
+      description: ''
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingTransaction) return
+
+    const amount = parseFloat(editFormData.amount)
+    if (isNaN(amount) || amount <= 0) {
+      alert('Por favor ingresa un monto válido')
+      return
+    }
+
+    if (!editFormData.category_id) {
+      alert('Por favor selecciona una categoría')
+      return
+    }
+
+    setIsSavingEdit(true)
+    try {
+      const updates = {
+        amount,
+        category_id: parseInt(editFormData.category_id),
+        date: editFormData.date,
+        description: editFormData.description || undefined
+      }
+
+      await transactionService.update(editingTransaction.id, updates)
+      
+      // Actualizar la lista local
+      setTransactions(prev => prev.map(t => 
+        t.id === editingTransaction.id 
+          ? { ...t, ...updates }
+          : t
+      ))
+      
+      // Refrescar el saldo de la cuenta
+      refetchAccounts()
+      
+      // Cerrar modal
+      handleCancelEdit()
+    } catch (error) {
+      console.error('Error updating transaction:', error)
+      alert('Error al actualizar la transacción. Inténtalo de nuevo.')
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
+
   if (!selectedAccount) {
     return (
       <div className="expenses-page">
@@ -165,7 +251,7 @@ export default function ExpensesPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1>Gastos - {selectedAccount.name}</h1>
-            <p>Saldo actual: ${selectedAccount.balance.toLocaleString()}</p>
+            <p>Saldo actual: Q{selectedAccount.balance.toLocaleString()}</p>
           </div>
           
           {/* BOTÓN MOVIDO AQUÍ - Al lado del header */}
@@ -272,9 +358,54 @@ export default function ExpensesPage() {
             {transactions.map(transaction => {
               const category = categoryMap[transaction.category_id];
               return (
-                <div key={transaction.id} className="transaction-card">
+                <div 
+                  key={transaction.id} 
+                  className="transaction-card" 
+                  style={{ position: 'relative', cursor: 'pointer' }}
+                  onClick={() => handleEditClick(transaction)}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeleteTransaction(transaction.id)
+                    }}
+                    disabled={deletingId === transaction.id}
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      background: '#dc3545',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      width: '24px',
+                      height: '24px',
+                      cursor: deletingId === transaction.id ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      opacity: deletingId === transaction.id ? 0.5 : 1,
+                      transition: 'all 0.2s ease',
+                      zIndex: 10
+                    }}
+                    onMouseEnter={(e) => {
+                      if (deletingId !== transaction.id) {
+                        e.currentTarget.style.background = '#c82333';
+                        e.currentTarget.style.transform = 'scale(1.1)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#dc3545';
+                      e.currentTarget.style.transform = 'scale(1)';
+                    }}
+                    title="Eliminar transacción"
+                  >
+                    ✕
+                  </button>
                   <div className="transaction-info">
-                    <h3>${Math.abs(transaction.amount).toLocaleString()}</h3>
+                    <h3>Q{Math.abs(transaction.amount).toLocaleString()}</h3>
                     <p style={{ color: category?.color || '#ccc' }}>
                       {category?.name || 'Sin categoría'}
                     </p>
@@ -287,6 +418,185 @@ export default function ExpensesPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editingTransaction && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={handleCancelEdit}
+        >
+          <div 
+            style={{
+              backgroundColor: '#1e1e1e',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#fff' }}>Editar Transacción</h2>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#ccc', fontSize: '14px' }}>
+                Monto
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={editFormData.amount}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, amount: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: '#2a2a2a',
+                  border: '1px solid #444',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '16px'
+                }}
+                disabled={isSavingEdit}
+                required
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#ccc', fontSize: '14px' }}>
+                Categoría
+              </label>
+              <select
+                value={editFormData.category_id}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, category_id: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: '#2a2a2a',
+                  border: '1px solid #444',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '16px'
+                }}
+                disabled={isSavingEdit}
+                required
+              >
+                <option value="">Seleccionar categoría</option>
+                {categories
+                  .filter(cat => cat.type === 'expense')
+                  .map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+              </select>
+              {editFormData.category_id && (
+                <div 
+                  style={{
+                    marginTop: '8px',
+                    height: '4px',
+                    backgroundColor: categoryMap[parseInt(editFormData.category_id)]?.color || '#ccc',
+                    borderRadius: '2px'
+                  }}
+                />
+              )}
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#ccc', fontSize: '14px' }}>
+                Fecha
+              </label>
+              <input
+                type="date"
+                value={editFormData.date}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, date: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: '#2a2a2a',
+                  border: '1px solid #444',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '16px'
+                }}
+                disabled={isSavingEdit}
+                required
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#ccc', fontSize: '14px' }}>
+                Descripción (Opcional)
+              </label>
+              <input
+                type="text"
+                value={editFormData.description}
+                onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Ej: Supermercado"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  backgroundColor: '#2a2a2a',
+                  border: '1px solid #444',
+                  borderRadius: '6px',
+                  color: '#fff',
+                  fontSize: '16px'
+                }}
+                disabled={isSavingEdit}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleCancelEdit}
+                disabled={isSavingEdit}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: isSavingEdit ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  opacity: isSavingEdit ? 0.5 : 1
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={isSavingEdit || !editFormData.category_id || !editFormData.amount}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#4CAF50',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: (isSavingEdit || !editFormData.category_id || !editFormData.amount) ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  opacity: (isSavingEdit || !editFormData.category_id || !editFormData.amount) ? 0.5 : 1
+                }}
+              >
+                {isSavingEdit ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
