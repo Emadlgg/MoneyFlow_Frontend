@@ -1,6 +1,7 @@
 // src/pages/IncomesPage.tsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { supabase } from '../services/supabaseClient'
+import { transactionService } from '../services/transaction.service'
+import { categoryService } from '../services/category.service'
 import { useAuth } from '../contexts/AuthContext'
 import { useSelectedAccount } from '../contexts/SelectedAccountContext'
 import { useAccount } from '../contexts/AccountContext'
@@ -12,7 +13,7 @@ interface Transaction {
   amount: number
   category_id: number
   date: string
-  account_id: string
+  account_id: number  // Cambiado de string a number
   description?: string
 }
 
@@ -56,26 +57,20 @@ export default function IncomesPage() {
 
     try {
       setLoading(true)
-      const [transactionsRes, categoriesRes] = await Promise.all([
-        supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('account_id', selectedAccountId)
-          .gt('amount', 0) // Incomes
-          .order('date', { ascending: false }),
-        supabase
-          .from('categories')
-          .select('id, name, color')
-          .eq('user_id', user.id)
-          .eq('type', 'income')
+      const [transactionsData, categoriesData] = await Promise.all([
+        transactionService.getAll({ 
+          account_id: parseInt(selectedAccountId),
+          type: 'income'
+        }),
+        categoryService.getAll('income')
       ])
-
-      if (transactionsRes.error) throw transactionsRes.error
-      if (categoriesRes.error) throw categoriesRes.error
       
-      setTransactions(transactionsRes.data || [])
-      setCategories(categoriesRes.data || [])
+      setTransactions(transactionsData || [])
+      setCategories(categoriesData.map(cat => ({
+        id: parseInt(cat.id.toString()),
+        name: cat.name,
+        color: cat.color || '#333333'
+      })))
     } catch (error) {
       console.error('Error fetching income data:', error)
       setTransactions([])
@@ -111,26 +106,16 @@ export default function IncomesPage() {
         return
       }
 
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert([{
-          user_id: user.id,
-          account_id: parseInt(selectedAccountId),
-          amount: amount,
-          category_id: parseInt(formData.category_id),
-          type: 'income',
-          date: new Date(formData.date).toISOString(),
-          description: formData.description
-        }])
-        .select()
-        .single()
+      const newTransaction = await transactionService.create({
+        account_id: parseInt(selectedAccountId),
+        amount: amount,
+        category_id: parseInt(formData.category_id),
+        type: 'income',
+        date: new Date(formData.date).toISOString(),
+        description: formData.description
+      })
 
-      if (error) {
-        console.error('Error creating income:', error)
-        throw error
-      }
-
-      setTransactions(prev => [data, ...prev])
+      setTransactions(prev => [newTransaction, ...prev])
       
       setFormData({
         amount: '',

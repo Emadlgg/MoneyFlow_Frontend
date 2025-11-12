@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { transactionService } from '../services/transaction.service';
+import { categoryService } from '../services/category.service';
 
 interface SpendingAlert {
   categoryId: string;
@@ -21,37 +22,49 @@ export function useSpendingLimits(userId: string) {
       console.log('🔍 === VERIFICANDO LÍMITES ===');
       console.log('👤 Usuario:', userId);
       
-      // Obtener categorías con límites
-      const { data: categories } = await supabase
-        .from('categories')
-        .select('id, name, spending_limit')
-        .eq('user_id', userId)
-        .eq('type', 'expense')
-        .not('spending_limit', 'is', null);
+      // NOTA: La funcionalidad de spending_limit requiere agregar el campo a la tabla categories en Supabase
+      // Por ahora, retornamos array vacío hasta que se agregue el campo a la base de datos
+      console.log('⚠️ spending_limit no está implementado en la base de datos');
+      setAlerts([]);
+      
+      /* 
+      // TODO: Descomentar cuando se agregue spending_limit a la tabla categories
+      
+      // Obtener categorías con límites usando el backend
+      const categories = await categoryService.getAll('expense');
+      const categoriesWithLimit = categories.filter(cat => cat.spending_limit != null);
 
-      console.log('📂 Categorías encontradas:', categories);
+      console.log('📂 Categorías con límites:', categoriesWithLimit.length);
 
-      if (!categories || categories.length === 0) {
+      if (categoriesWithLimit.length === 0) {
         console.log('❌ No hay categorías con límites');
         setAlerts([]);
         return;
       }
 
-      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      // Calcular primer y último día del mes actual correctamente
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth(); // 0-11
+      
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0); // Día 0 del siguiente mes = último día del mes actual
+      
+      const startDate = firstDay.toISOString().split('T')[0];  // YYYY-MM-DD
+      const endDate = lastDay.toISOString().split('T')[0];     // YYYY-MM-DD
+      
       const alertsToShow: SpendingAlert[] = [];
 
-      for (const category of categories) {
-        // Calcular gasto total del mes actual para esta categoría
-        const { data: transactions } = await supabase
-          .from('transactions')
-          .select('amount')
-          .eq('user_id', userId)
-          .eq('category_id', category.id)
-          .eq('type', 'expense')
-          .gte('date', `${currentMonth}-01`)
-          .lte('date', `${currentMonth}-31`);
+      for (const category of categoriesWithLimit) {
+        // Obtener transacciones del mes actual para esta categoría usando el backend
+        const transactions = await transactionService.getAll({
+          type: 'expense',
+          category_id: parseInt(category.id),
+          start_date: startDate,
+          end_date: endDate
+        });
 
-        const totalSpent = transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
+        const totalSpent = transactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
         const limit = category.spending_limit!;
         const percentage = (totalSpent / limit) * 100;
 
@@ -72,10 +85,9 @@ export function useSpendingLimits(userId: string) {
       }
 
       console.log('🔔 Total de alertas a mostrar:', alertsToShow.length);
-      console.log('📋 Alertas completas:', alertsToShow);
-      
       setAlerts(alertsToShow);
       console.log('✅ Estado de alertas actualizado');
+      */
       
     } catch (error) {
       console.error('❌ Error:', error);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { supabase } from '../services/supabaseClient'
+import { transactionService } from '../services/transaction.service'
+import { categoryService } from '../services/category.service'
 import { useAuth } from '../contexts/AuthContext'
 import { useSelectedAccount } from '../contexts/SelectedAccountContext'
 import { useAccount } from '../contexts/AccountContext'
@@ -12,7 +13,7 @@ interface Transaction {
   amount: number
   category_id: number
   date: string
-  account_id: string
+  account_id: number  // Cambiado de string a number
   description?: string
 }
 
@@ -59,25 +60,20 @@ export default function ExpensesPage() {
     try {
       setLoading(true)
       // Fetch both transactions and categories
-      const [transactionsRes, categoriesRes] = await Promise.all([
-        supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('account_id', selectedAccountId)
-          .lt('amount', 0), // Expenses
-        supabase
-          .from('categories')
-          .select('id, name, color')
-          .eq('user_id', user.id)
-          .eq('type', 'expense')
+      const [transactionsData, categoriesData] = await Promise.all([
+        transactionService.getAll({
+          account_id: parseInt(selectedAccountId),
+          type: 'expense'
+        }),
+        categoryService.getAll('expense')
       ]);
 
-      if (transactionsRes.error) throw transactionsRes.error
-      if (categoriesRes.error) throw categoriesRes.error
-
-      setTransactions(transactionsRes.data || [])
-      setCategories(categoriesRes.data || [])
+      setTransactions(transactionsData || [])
+      setCategories(categoriesData.map(cat => ({
+        id: parseInt(cat.id.toString()),
+        name: cat.name,
+        color: cat.color || '#333333'
+      })))
     } catch (error) {
       console.error('Error fetching expenses:', error)
       setTransactions([])
@@ -113,27 +109,17 @@ export default function ExpensesPage() {
         return
       }
 
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert([{
-          user_id: user.id,
-          account_id: parseInt(selectedAccountId),
-          amount: -amount, // Negativo para gastos
-          category_id: parseInt(formData.category_id),
-          type: 'expense',
-          date: new Date(formData.date).toISOString(),
-          description: formData.description
-        }])
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error creating expense:', error)
-        throw error
-      }
+      const newTransaction = await transactionService.create({
+        account_id: parseInt(selectedAccountId),
+        amount: amount,
+        category_id: parseInt(formData.category_id),
+        type: 'expense',
+        date: new Date(formData.date).toISOString(),
+        description: formData.description
+      })
 
       // Actualizar la lista local
-      setTransactions(prev => [data, ...prev]);
+      setTransactions(prev => [newTransaction, ...prev]);
       
       // Limpiar formulario
       setFormData({

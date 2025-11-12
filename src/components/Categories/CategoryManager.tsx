@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../services/supabaseClient';
+import { useCategory } from '../../contexts/CategoryContext';
+import { transactionService } from '../../services/transaction.service';
 import { useAuth } from '../../contexts/AuthContext';
 import './CategoryManager.css';
 
@@ -17,90 +18,62 @@ interface CategoryManagerProps {
 
 export default function CategoryManager({ type, selectedCategoryId, onCategorySelect, onCategoriesUpdate }: CategoryManagerProps) {
   const { user } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories: allCategories, createCategory, deleteCategory: deleteCategoryFromContext } = useCategory();
   const [isCreating, setIsCreating] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState(type === 'income' ? '#28a745' : '#e53e3e');
-  const [spendingLimit, setSpendingLimit] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [transactionCount, setTransactionCount] = useState(0);
 
-  const fetchCategories = useCallback(async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase.rpc('get_user_categories', {
-      p_user_id: user.id,
-      p_type: type,
-    });
-
-    if (error) {
-      console.error('Error fetching categories via rpc:', error);
-    } else if (data) {
-      const typedData = data as Category[];
-      const uniqueCategories = Array.from(
-        new Map(typedData.map((cat: Category) => [cat.name.trim().toLowerCase(), cat])).values()
-      ) as Category[];
-      uniqueCategories.sort((a: Category, b: Category) => a.name.localeCompare(b.name));
-      setCategories(uniqueCategories);
-    }
-  }, [user, type]);
-
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+  // Filtrar categorías por tipo
+  const categories = allCategories
+    .filter(cat => cat.type === type)
+    .map(cat => ({
+      id: parseInt(cat.id),
+      name: cat.name
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const handleCreateCategory = async () => {
     if (!user || !newCategoryName.trim()) return;
 
-    const categoryData = {
-      name: newCategoryName.trim(),
-      user_id: user.id,
-      type: type,
-      color: newCategoryColor,
-      ...(type === 'expense' && spendingLimit ? { 
-        spending_limit: parseFloat(spendingLimit) 
-      } : {})
-    };
-
-    const { data, error } = await supabase
-      .from('categories')
-      .insert(categoryData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating category:', error);
-    } else if (data) {
+    try {
+      await createCategory(newCategoryName.trim(), type, newCategoryColor);
+      
       setNewCategoryName('');
       setNewCategoryColor(type === 'income' ? '#28a745' : '#e53e3e');
-      setSpendingLimit('');
       setIsCreating(false);
-      await fetchCategories();
+      
       if (onCategoriesUpdate) {
         onCategoriesUpdate();
       }
-      onCategorySelect(data.id.toString());
+      
+      // Seleccionar la nueva categoría (será la última de la lista filtrada)
+      const newCat = allCategories.find(c => c.name === newCategoryName.trim() && c.type === type);
+      if (newCat) {
+        onCategorySelect(newCat.id);
+      }
+    } catch (error) {
+      console.error('Error creating category:', error);
+      alert('Error al crear categoría. Puede que ya exista una con ese nombre.');
     }
   };
 
   const handleDeleteClick = async (categoryId: number) => {
     if (!user) return;
 
-    // Verificar transacciones asociadas ANTES de mostrar el modal
-    const { data: transactions, error: transactionsError } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('category_id', categoryId);
+    try {
+      // Verificar transacciones asociadas ANTES de mostrar el modal
+      const transactions = await transactionService.getAll({ 
+        category_id: categoryId 
+      });
 
-    if (transactionsError) {
-      console.error('Error checking transactions:', transactionsError);
-      return;
+      setTransactionCount(transactions?.length || 0);
+      setShowDeleteConfirm(categoryId);
+    } catch (error) {
+      console.error('Error checking transactions:', error);
     }
-
-    setTransactionCount(transactions?.length || 0);
-    setShowDeleteConfirm(categoryId);
   };
 
   const handleDeleteCategory = async (categoryId: number, categoryName: string) => {
@@ -110,38 +83,19 @@ export default function CategoryManager({ type, selectedCategoryId, onCategorySe
     try {
       console.log(`🗑️ Eliminando categoría: ${categoryName} (ID: ${categoryId})`);
 
-      // Eliminar transacciones asociadas primero
+      // NOTA: El backend debería manejar la eliminación de transacciones asociadas
+      // o prevenir la eliminación si hay transacciones
+      // Por ahora, solo intentamos eliminar la categoría
+      
       if (transactionCount > 0) {
-        console.log('🗑️ Eliminando transacciones asociadas...');
-        const { error: deleteTransactionsError } = await supabase
-          .from('transactions')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('category_id', categoryId);
-
-        if (deleteTransactionsError) {
-          throw deleteTransactionsError;
-        }
-        console.log('✅ Transacciones eliminadas correctamente');
+        console.log(`⚠️ Hay ${transactionCount} transacciones asociadas a esta categoría`);
+        console.log('⚠️ El backend debería manejar esto o retornar error');
       }
 
-      // Eliminar la categoría
-      console.log('🗑️ Eliminando categoría...');
-      const { error: deleteCategoryError } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', categoryId)
-        .eq('user_id', user.id);
-
-      if (deleteCategoryError) {
-        throw deleteCategoryError;
-      }
+      await deleteCategoryFromContext(categoryId.toString());
 
       console.log('✅ Categoría eliminada correctamente');
 
-      // Actualizar UI
-      await fetchCategories();
-      
       // Si la categoría eliminada estaba seleccionada, limpiar selección
       if (selectedCategoryId === categoryId.toString()) {
         onCategorySelect('');
@@ -180,14 +134,13 @@ export default function CategoryManager({ type, selectedCategoryId, onCategorySe
             className="new-category-color"
           />
           
+          {/* NOTA: spending_limit requiere agregar el campo a la tabla categories en Supabase
           {type === 'expense' && (
             <div className="spending-limit-field">
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                value={spendingLimit}
-                onChange={(e) => setSpendingLimit(e.target.value)}
                 placeholder="Límite mensual (opcional)"
                 className="spending-limit-input"
                 style={{
@@ -204,12 +157,12 @@ export default function CategoryManager({ type, selectedCategoryId, onCategorySe
               </small>
             </div>
           )}
+          */}
           
           <div className="create-category-actions">
             <button onClick={handleCreateCategory} className="save-btn">Guardar</button>
             <button onClick={() => {
               setIsCreating(false);
-              setSpendingLimit('');
             }} className="cancel-btn">Cancelar</button>
           </div>
         </div>

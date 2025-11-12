@@ -10,6 +10,7 @@ import FinancialTips from "./pages/FinancialTips";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AccountProvider } from "./contexts/AccountContext";
 import { SelectedAccountProvider } from "./contexts/SelectedAccountContext";
+import { CategoryProvider } from "./contexts/CategoryContext";
 
 import Sidebar from "./components/layout/Sidebar";
 import SpendingAlerts from "./components/SpendingAlerts";
@@ -57,28 +58,30 @@ function AppContent() {
   // Si hay usuario, mostrar aplicación completa
   return (
     <AccountProvider>
-      <SelectedAccountProvider>
-        <Router>
-          <div className="app-layout">
-            <Sidebar />
-            <main className="app-layout__content">
-              <Routes>
-                <Route path="/" element={<Navigate to="/incomes" replace />} />
-                <Route path="/home" element={<Navigate to="/incomes" replace />} />
-                <Route path="/accounts" element={<AccountsPage />} />
-                <Route path="/incomes" element={<IncomesPage />} />
-                <Route path="/expenses" element={<ExpensesPage />} />
-                <Route path="/reports" element={<ReportsPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/tips" element={<FinancialTips />} />
-                <Route path="*" element={<Navigate to="/incomes" replace />} />
-              </Routes>
-            </main>
-            <SpendingAlerts />
-          </div>
-        </Router>
-      </SelectedAccountProvider>
+      <CategoryProvider>
+        <SelectedAccountProvider>
+          <Router>
+            <div className="app-layout">
+              <Sidebar />
+              <main className="app-layout__content">
+                <Routes>
+                  <Route path="/" element={<Navigate to="/incomes" replace />} />
+                  <Route path="/home" element={<Navigate to="/incomes" replace />} />
+                  <Route path="/accounts" element={<AccountsPage />} />
+                  <Route path="/incomes" element={<IncomesPage />} />
+                  <Route path="/expenses" element={<ExpensesPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/tips" element={<FinancialTips />} />
+                  <Route path="*" element={<Navigate to="/incomes" replace />} />
+                </Routes>
+              </main>
+              <SpendingAlerts />
+            </div>
+          </Router>
+        </SelectedAccountProvider>
+      </CategoryProvider>
     </AccountProvider>
   );
 }

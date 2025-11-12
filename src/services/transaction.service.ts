@@ -31,12 +31,21 @@ export interface UpdateTransactionParams {
 export const transactionService = {
   /**
    * Obtiene todas las transacciones del usuario autenticado
-   * @param filters - Filtros opcionales (account_id, type)
+   * @param filters - Filtros opcionales (account_id, type, category_id, start_date, end_date)
    */
-  async getAll(filters?: { account_id?: number; type?: 'income' | 'expense' }): Promise<Transaction[]> {
+  async getAll(filters?: { 
+    account_id?: number; 
+    type?: 'income' | 'expense';
+    category_id?: number;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<Transaction[]> {
     const params = new URLSearchParams();
     if (filters?.account_id) params.append('account_id', filters.account_id.toString());
     if (filters?.type) params.append('type', filters.type);
+    if (filters?.category_id) params.append('category_id', filters.category_id.toString());
+    if (filters?.start_date) params.append('start_date', filters.start_date);
+    if (filters?.end_date) params.append('end_date', filters.end_date);
     
     const queryString = params.toString();
     const url = queryString ? `/transactions?${queryString}` : '/transactions';
