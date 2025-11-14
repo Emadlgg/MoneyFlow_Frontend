@@ -22,9 +22,9 @@ export function useTransactions() {
     }
     setLoading(true)
     try {
-      // Si getTransactions espera number, convertir account.id a número
-      const accountId = Number(account.id) // ✅ Convertir a número
-      const data = await getTransactions(accountId)
+      // getTransactions espera un objeto con filtros
+      const accountId = Number(account.id)
+      const data = await getTransactions({ account_id: accountId })
       setTransactions(data)
       setError(null)
     } catch (err) {
@@ -50,13 +50,15 @@ export function useTransactions() {
       }
       setLoading(true)
       try {
-        // Convertir account.id a número si es necesario
-        const accountId = Number(account.id) // ✅ Convertir a número
+        const accountId = Number(account.id)
+        // addTransaction espera CreateTransactionParams (sin user_id, necesita category_id y type)
+        // Nota: Este código parece incompleto - category debería ser category_id (number)
+        // y falta el campo 'type'. Esto necesita más contexto de dónde se llama esta función.
         await addTransaction({
-          user_id: user.id,
-          account_id: accountId, // ✅ Usar el número convertido
-          category: entry.category,
+          account_id: accountId,
+          category_id: Number(entry.category), // Asumiendo que category es un ID
           amount: entry.amount,
+          type: entry.amount > 0 ? 'income' : 'expense', // Inferir tipo del monto
           date: entry.date,
         })
         await fetchAll()

@@ -12,7 +12,9 @@ export function useCategories(type: 'ingreso' | 'gasto') {
     if (!user) return
     setLoading(true)
     try {
-      const data = await categoryService.getAll(user.id, type)
+      // getAll solo acepta type como parámetro opcional
+      const apiType = type === 'ingreso' ? 'income' : 'expense'
+      const data = await categoryService.getAll(apiType)
       setCategories(data)
       setError(null)
     } catch (err) {
@@ -31,7 +33,9 @@ export function useCategories(type: 'ingreso' | 'gasto') {
       if (!user) return
       setLoading(true)
       try {
-        await categoryService.create(user.id, name, type)
+        // create acepta CreateCategoryParams
+        const apiType = type === 'ingreso' ? 'income' : 'expense'
+        await categoryService.create({ name, type: apiType })
         await fetchAll()
       } catch (err) {
         setError(err as Error)
@@ -46,7 +50,8 @@ export function useCategories(type: 'ingreso' | 'gasto') {
     async (id: number) => {
       setLoading(true)
       try {
-        await categoryService.remove(id)
+        // El método correcto es 'delete', no 'remove'
+        await categoryService.delete(id)
         await fetchAll()
       } catch (err) {
         setError(err as Error)
