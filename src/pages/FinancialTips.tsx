@@ -10,6 +10,7 @@ interface Transaction {
   amount: number;
   type: "income" | "expense";
   category_id?: number;
+  category_name?: string;
   date?: string;
 }
 
@@ -54,10 +55,10 @@ export default function FinancialTipsPage(): JSX.Element {
             acc.totalIncome += amount;
           } else {
             acc.totalExpenses += amount;
-            if (t.category_id) {
-              const key = `cat_${t.category_id}`;
-              acc.expensesByCategory[key] =
-                (acc.expensesByCategory[key] || 0) + amount;
+            if (t.category_name) {
+              // Usar el nombre de la categoría directamente
+              acc.expensesByCategory[t.category_name] =
+                (acc.expensesByCategory[t.category_name] || 0) + amount;
             }
           }
           return acc;

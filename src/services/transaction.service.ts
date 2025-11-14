@@ -5,6 +5,7 @@ export interface Transaction {
   user_id: string;
   amount: number;
   category_id: number;
+  category_name?: string;
   account_id: number;
   type: 'income' | 'expense';
   date: string;
