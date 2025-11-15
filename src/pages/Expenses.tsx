@@ -94,11 +94,6 @@ export default function ExpensesPage() {
       return
     }
 
-    if (!formData.amount || !formData.category_id || !formData.date) {
-      alert('Completa todos los campos')
-      return
-    }
-
     setIsSubmitting(true)
     try {
       const amount = parseFloat(formData.amount)
